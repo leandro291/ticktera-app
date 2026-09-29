@@ -19,6 +19,7 @@ export const VENUE_LAYOUTS: Record<VenueLayout["id"], VenueLayout> = {
   theater: {
     id: "theater",
     stage: { x: 15, y: 0, width: 70, height: 12 },
+    seatCurve: 0.35,
     zones: [
       { id: "platea", name: "Platea", shortName: "Platea", kind: "numbered", shape: { x: 15, y: 14, width: 70, height: 50 }, color: "#4f46e5", textColor: "#ffffff", priceFactor: 2, seating: { rows: 14, seatsPerRow: 20 } },
       { id: "palco-izquierdo", name: "Palco izquierdo", shortName: "Palco izq.", kind: "general-admission", shape: { x: 0, y: 14, width: 13, height: 50 }, color: "#818cf8", textColor: "#1e1b4b", priceFactor: 1.5 },

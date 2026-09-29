@@ -9,8 +9,8 @@ import type { EventVenue, Seat } from "../types/venue";
 
 /** Cart bound to one event: its lines, resolved summary and actions. */
 export function useEventCart(venue: EventVenue) {
-  const { eventId, lines, setQuantity, toggleSeat } = useCartStore(
-    useShallow((s) => ({ eventId: s.eventId, lines: s.lines, setQuantity: s.setQuantity, toggleSeat: s.toggleSeat })),
+  const { eventId, lines, setQuantity, toggleSeat, setSeats } = useCartStore(
+    useShallow((s) => ({ eventId: s.eventId, lines: s.lines, setQuantity: s.setQuantity, toggleSeat: s.toggleSeat, setSeats: s.setSeats })),
   );
   const eventLines = useMemo(() => (eventId === venue.eventId ? lines : {}), [eventId, lines, venue.eventId]);
   const summary = useMemo(
@@ -25,5 +25,6 @@ export function useEventCart(venue: EventVenue) {
     isFull: (zoneId: string) => (eventLines[zoneId]?.quantity ?? 0) >= MAX_TICKETS_PER_ZONE,
     setQuantity: (zoneId: string, quantity: number) => setQuantity(venue.eventId, zoneId, quantity),
     toggleSeat: (zoneId: string, seat: Seat) => toggleSeat(venue.eventId, zoneId, seat),
+    setSeats: (zoneId: string, seatIds: string[]) => setSeats(venue.eventId, zoneId, seatIds),
   };
 }

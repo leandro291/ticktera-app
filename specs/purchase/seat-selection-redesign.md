@@ -1,8 +1,8 @@
 # Rediseño de selección de entradas y mapa de butacas
 
 - Module: purchase
-- Status: draft
-- Approved by: —
+- Status: done
+- Approved by: noe12claude (2026-09-29)
 - Mode: SDD
 
 ## Goal
@@ -119,11 +119,34 @@ export function pickBestSeats(section: SeatSection, count: number, alreadySelect
 ### Phase 6 — Selección de entradas
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T16 | geometría de butacas (filas curvas, centros) + mejores disponibles | modules/purchase/lib/seat-layout.ts, modules/purchase/lib/best-seats.ts (+test), modules/purchase/types/venue.ts, modules/purchase/data/venues.ts | — | A | AC15, AC16 | todo |
-| T17 | mapa de butacas (círculos, tooltip, leyenda, minimapa, chips) | modules/purchase/components/seat-map.tsx, seat-chips.tsx | T16 | B | AC15, AC16 | todo |
-| T18 | panel unificado por pasos (zonas + tarjetas + cantidad) | modules/purchase/components/ticket-selection.tsx, zone-picker.tsx, zone-map.tsx, ga-quantity.tsx, ticket-tier-list.tsx (eliminar) | T16 | B | AC14 | todo |
-| T19 | móvil: mapa a pantalla completa y barra fija | modules/purchase/components/ticket-selection.tsx, order-summary.tsx | T17, T18 | C | AC17 | todo |
+| T16 | geometría de butacas (filas curvas, centros) + mejores disponibles | modules/purchase/lib/seat-layout.ts, modules/purchase/lib/best-seats.ts (+test), modules/purchase/types/venue.ts, modules/purchase/data/venues.ts, modules/purchase/services/venue-service.ts, modules/purchase/store/use-cart-store.ts, modules/purchase/hooks/use-event-cart.ts | — | A | AC15, AC16 | done |
+| T17 | mapa de butacas (círculos, tooltip, leyenda, minimapa, chips) | modules/purchase/components/seat-map.tsx, seat-chips.tsx | T16 | B | AC15, AC16 | done |
+| T18 | panel unificado por pasos (zonas + tarjetas + cantidad) | modules/purchase/components/ticket-selection.tsx, zone-picker.tsx, zone-map.tsx, ga-quantity.tsx, ticket-tier-list.tsx (eliminar) | T16 | B | AC14 | done |
+| T19 | móvil: mapa a pantalla completa y barra fija | modules/purchase/components/ticket-selection.tsx, order-summary.tsx | T17, T18 | C | AC17 | done |
+
+## Decisions
+- "Mejores disponibles" es una acción secundaria dentro del paso Butacas.
+- Butaca elegida: fondo oscuro (`strong`) con check blanco, en vez de índigo. La Platea del teatro ya es índigo y una butaca elegida no se distinguiría de una libre (mismo criterio que seats.io).
+- El tooltip muestra el precio de la zona (no hay precios por butaca).
+
+## Notas de implementación (Phase 6)
+- **Geometría (`lib/seat-layout`):**
+  - Butacas de radio 11 y paso de 28px; pasillo cada 8 butacas.
+  - En teatro (`seatCurve: 0.35`), las filas se proyectan sobre arcos concéntricos a un punto sobre el escenario.
+  - Todo se encaja bajo una banda de escenario y `SeatSection` guarda `stage` y `rows[].start/end` para las letras.
+- **`pickBestSeats`:**
+  - Busca ventanas de N butacas libres adyacentes, fila por fila desde el frente, y elige la más centrada. Dos butacas son adyacentes si tienen número consecutivo y distancia de un paso; el pasillo corta la adyacencia.
+  - Si no hay ninguna ventana, toma las N libres más cercanas a la mejor butaca disponible (`contiguous: false`).
+  - El carrito suma `setSeats` para reemplazar la selección de la zona, limitada a 6.
+- **Mapa:**
+  - Círculos SVG del color de la zona. Las ocupadas se ven grises con ×, y las bloqueadas por el límite, atenuadas.
+  - Hover con mouse o foco con teclado muestra un tooltip con zona, fila, asiento y precio.
+  - Hay un minimapa cuando el zoom supera 1.15× el encuadre (solo escritorio).
+- **Pasos:**
+  - `ZonePicker` combina el mapa y las tarjetas de zona sincronizadas; el mapa muestra las zonas agotadas rayadas.
+  - Una zona general abre `GaQuantity` en el mismo panel.
+  - Una zona numerada abre el mapa en el panel (escritorio) o en un sheet a pantalla completa (móvil).
+  - "Todas las zonas" vuelve al paso 1 sin perder lo elegido. `ticket-tier-list.tsx` se eliminó.
 
 ## Open questions
-- ¿"Mejores disponibles" desde el inicio o solo como acción secundaria? (Propuesta: acción secundaria dentro del paso Butacas.)
-- ¿Mostrar el precio en cada butaca (tooltip) o solo el de la zona? (Propuesta: tooltip con el precio de la zona; los precios por butaca quedan fuera de alcance.)
+- (ninguna)

@@ -5,7 +5,7 @@ import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import { MaximizeIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { formatPrice, type Currency } from "@/modules/event";
 import { cn } from "@/lib/utils";
-import { SEAT_SIZE } from "../lib/seat-layout";
+import { SEAT_R } from "../lib/seat-layout";
 import type { Seat, SeatSection, ZoneTier } from "../types/venue";
 
 interface SeatMapProps {
@@ -23,30 +23,96 @@ interface SeatMapProps {
 
 /** ~24px seats: comfortable to tap while still showing context. */
 const TOUCH_SCALE = 1.1;
+const TAKEN_FILL = "#e4e4e7";
+const TAKEN_MARK = "#a1a1aa";
+const SELECTED_FILL = "#18181b";
 
 type Direction = "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown";
 
+interface Tip {
+  seat: Seat;
+  x: number;
+  y: number;
+}
+
+interface View {
+  scale: number;
+  x: number;
+  y: number;
+  /** Visible frame size in screen pixels. */
+  width: number;
+  height: number;
+}
+
 const controlClass = "flex size-10 items-center justify-center rounded-xl text-foreground hover:bg-muted disabled:opacity-40";
+
+export const seatLabel = (seat: Pick<Seat, "row" | "number">) => `Fila ${seat.row} · Asiento ${seat.number}`;
+
+/** Stage band; a curved section draws its front edge as an arc facing the seats. */
+function Stage({ stage }: { stage: SeatSection["stage"] }) {
+  const { x, y, width, height, curve } = stage;
+  const d =
+    curve > 0
+      ? `M ${x} ${y + 10} Q ${x} ${y} ${x + 10} ${y} L ${x + width - 10} ${y} Q ${x + width} ${y} ${x + width} ${y + 10} L ${x + width} ${y + height * 0.55} Q ${x + width / 2} ${y + height * 1.45} ${x} ${y + height * 0.55} Z`
+      : `M ${x + 12} ${y} H ${x + width - 12} Q ${x + width} ${y} ${x + width} ${y + 12} V ${y + height - 12} Q ${x + width} ${y + height} ${x + width - 12} ${y + height} H ${x + 12} Q ${x} ${y + height} ${x} ${y + height - 12} V ${y + 12} Q ${x} ${y} ${x + 12} ${y} Z`;
+  return (
+    <g aria-hidden>
+      <path d={d} className="fill-stage" />
+      <text x={x + width / 2} y={y + height * (curve > 0 ? 0.42 : 0.5)} dominantBaseline="central" textAnchor="middle" className="fill-white text-[11px] font-bold tracking-[0.2em]">
+        ESCENARIO
+      </text>
+    </g>
+  );
+}
+
+/** Whole-section thumbnail with the visible area, shown while zoomed in (desktop). */
+function MiniMap({ section, view }: { section: SeatSection; view: View }) {
+  const w = 132;
+  const k = w / section.width;
+  const h = section.height * k;
+  const rect = {
+    x: Math.max(0, (-view.x / view.scale) * k),
+    y: Math.max(0, (-view.y / view.scale) * k),
+    width: Math.min(w, (view.width / view.scale) * k),
+    height: Math.min(h, (view.height / view.scale) * k),
+  };
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden className="absolute top-3 left-3 z-10 hidden rounded-lg border border-border bg-background/95 shadow-sm lg:block">
+      <rect x={section.stage.x * k} y={section.stage.y * k} width={section.stage.width * k} height={section.stage.height * k} rx={2} className="fill-stage" />
+      {section.seats.map((s) => (
+        <circle key={s.id} cx={s.cx * k} cy={s.cy * k} r={Math.max(0.9, SEAT_R * k)} className={s.taken ? "fill-border" : "fill-indigo-300"} />
+      ))}
+      <rect {...rect} rx={2} className="fill-primary/10 stroke-primary" strokeWidth={1.25} />
+    </svg>
+  );
+}
 
 export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onToggle, framing = "overview", className }: SeatMapProps) {
   const selected = useMemo(() => new Set(selectedSeatIds), [selectedSeatIds]);
-  const grid = useMemo(() => {
-    const rows = new Map<string, Seat[]>();
-    for (const seat of section.seats) rows.set(seat.row, [...(rows.get(seat.row) ?? []), seat]);
-    return [...rows.values()];
-  }, [section.seats]);
+  const rows = useMemo(() => section.rows.map((r) => section.seats.filter((s) => s.row === r.label)), [section]);
   const [focusedId, setFocusedId] = useState(() => section.seats.find((s) => !s.taken)?.id ?? section.seats[0]?.id);
-  const seatRefs = useRef(new Map<string, SVGRectElement>());
+  const [tip, setTip] = useState<Tip | null>(null);
+  const [view, setView] = useState<View | null>(null);
+  const seatRefs = useRef(new Map<string, SVGGElement>());
+  const frameRef = useRef<HTMLDivElement>(null);
   // A drag that pans the map must not toggle the seat under the pointer.
   const panned = useRef(false);
 
   const price = formatPrice(tier.price, currency);
+  const selectedCount = selectedSeatIds.length;
+
+  const showTip = (seat: Seat, el: Element) => {
+    const frame = frameRef.current?.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    if (!frame) return;
+    setTip({ seat, x: box.left + box.width / 2 - frame.left, y: box.top - frame.top });
+  };
 
   const move = (seat: Seat, key: Direction) => {
-    const r = grid.findIndex((row) => row[0].row === seat.row);
-    const c = grid[r].findIndex((s) => s.id === seat.id);
+    const r = rows.findIndex((row) => row[0]?.row === seat.row);
+    const c = rows[r].findIndex((s) => s.id === seat.id);
     const [nr, nc] = { ArrowLeft: [r, c - 1], ArrowRight: [r, c + 1], ArrowUp: [r - 1, c], ArrowDown: [r + 1, c] }[key];
-    const target = grid[nr]?.[Math.min(nc, (grid[nr]?.length ?? 1) - 1)];
+    const target = rows[nr]?.[Math.min(nc, (rows[nr]?.length ?? 1) - 1)];
     if (!target || nc < 0) return;
     setFocusedId(target.id);
     seatRefs.current.get(target.id)?.focus();
@@ -62,6 +128,9 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
     }
   };
 
+  // The minimap only helps once the section no longer fits in the frame.
+  const zoomedIn = view !== null && view.scale > Math.min(view.width / section.width, view.height / section.height) * 1.15;
+
   return (
     <div className={cn("flex flex-col gap-3", className)}>
       <TransformWrapper
@@ -71,19 +140,27 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
         initialScale={framing === "touch" ? TOUCH_SCALE : undefined}
         centerOnInit
         doubleClick={{ disabled: true }}
+        onTransform={(ref, state) =>
+          setView({
+            scale: state.scale,
+            x: state.positionX,
+            y: state.positionY,
+            width: ref.instance.wrapperComponent?.clientWidth ?? 0,
+            height: ref.instance.wrapperComponent?.clientHeight ?? 0,
+          })
+        }
         onPanningStart={() => {
           panned.current = false;
         }}
         onPanning={() => {
           panned.current = true;
+          setTip(null);
         }}
+        onZoomStart={() => setTip(null)}
       >
         {({ zoomIn, zoomOut, resetTransform }) => (
-          <div className="relative flex min-h-[340px] grow flex-col overflow-hidden rounded-2xl border border-border bg-surface lg:min-h-[400px]">
-            <div className="m-2 mb-0 rounded-[10px] bg-strong py-1.5 text-center text-[10px] font-bold tracking-[0.16em] text-white" aria-hidden>
-              ESCENARIO
-            </div>
-            <TransformComponent wrapperClass="size-full! grow cursor-grab active:cursor-grabbing" contentClass="py-3">
+          <div ref={frameRef} className="relative flex min-h-[340px] grow flex-col overflow-hidden rounded-2xl border border-border bg-surface lg:min-h-[420px]">
+            <TransformComponent wrapperClass="size-full! grow cursor-grab active:cursor-grabbing">
               <svg
                 width={section.width}
                 height={section.height}
@@ -92,50 +169,88 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
                 aria-label={`Butacas de ${tier.name}`}
                 className="touch-none select-none"
               >
+                <Stage stage={section.stage} />
                 {section.rows.map((row) => (
                   <g key={row.label} className="fill-muted-foreground text-[11px] font-semibold" aria-hidden>
-                    <text x={14} y={row.y} dominantBaseline="central" textAnchor="middle">{row.label}</text>
-                    <text x={section.width - 14} y={row.y} dominantBaseline="central" textAnchor="middle">{row.label}</text>
+                    <text x={row.start.x} y={row.start.y} dominantBaseline="central" textAnchor="middle">
+                      {row.label}
+                    </text>
+                    <text x={row.end.x} y={row.end.y} dominantBaseline="central" textAnchor="middle">
+                      {row.label}
+                    </text>
                   </g>
                 ))}
                 {section.seats.map((seat) => {
                   const isSelected = selected.has(seat.id);
-                  const disabled = seat.taken || (atLimit && !isSelected);
+                  const blocked = !seat.taken && atLimit && !isSelected;
+                  const disabled = seat.taken || blocked;
+                  const status = seat.taken ? "ocupado" : isSelected ? "elegido" : blocked ? "límite alcanzado" : price;
+                  const { cx, cy } = seat;
                   return (
-                    <rect
+                    <g
                       key={seat.id}
                       ref={(el) => {
                         if (el) seatRefs.current.set(seat.id, el);
                         else seatRefs.current.delete(seat.id);
                       }}
-                      x={seat.x}
-                      y={seat.y}
-                      width={SEAT_SIZE}
-                      height={SEAT_SIZE}
-                      rx={6}
                       role="checkbox"
                       aria-checked={isSelected}
                       aria-disabled={disabled}
-                      aria-label={`Fila ${seat.row}, asiento ${seat.number}, ${seat.taken ? "ocupado" : price}`}
+                      aria-label={`${tier.name}, fila ${seat.row}, asiento ${seat.number}, ${status}`}
                       tabIndex={seat.id === focusedId ? 0 : -1}
-                      onFocus={() => setFocusedId(seat.id)}
+                      onFocus={(e) => {
+                        setFocusedId(seat.id);
+                        if (e.currentTarget.matches(":focus-visible")) showTip(seat, e.currentTarget);
+                      }}
+                      onBlur={() => setTip(null)}
+                      onPointerEnter={(e) => e.pointerType === "mouse" && showTip(seat, e.currentTarget)}
+                      onPointerLeave={() => setTip(null)}
                       onKeyDown={onKeyDown(seat)}
                       onClick={() => {
                         if (!panned.current) onToggle(seat);
                       }}
                       className={cn(
-                        "stroke-[1.5] outline-none focus-visible:stroke-strong focus-visible:stroke-[3]",
-                        seat.taken
-                          ? "cursor-not-allowed fill-border stroke-border"
-                          : isSelected
-                            ? "cursor-pointer fill-primary stroke-primary"
-                            : cn("fill-white stroke-[#818cf8]", disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer hover:fill-accent"),
+                        "group outline-none",
+                        seat.taken || blocked ? "cursor-not-allowed" : "cursor-pointer",
+                        blocked && "opacity-35",
                       )}
-                    />
+                    >
+                      {/* Focus ring */}
+                      <circle cx={cx} cy={cy} r={SEAT_R + 3.5} className="fill-none stroke-ring stroke-[2.5] opacity-0 group-focus-visible:opacity-100" />
+                      <circle
+                        cx={cx}
+                        cy={cy}
+                        r={SEAT_R}
+                        fill={seat.taken ? TAKEN_FILL : isSelected ? SELECTED_FILL : tier.color}
+                        className={cn(!disabled && !isSelected && "stroke-strong/0 stroke-2 transition-[stroke] group-hover:stroke-strong")}
+                      />
+                      {seat.taken && (
+                        <path d={`M ${cx - 3.5} ${cy - 3.5} L ${cx + 3.5} ${cy + 3.5} M ${cx + 3.5} ${cy - 3.5} L ${cx - 3.5} ${cy + 3.5}`} stroke={TAKEN_MARK} strokeWidth={1.6} strokeLinecap="round" />
+                      )}
+                      {isSelected && (
+                        <path d={`M ${cx - 4.5} ${cy + 0.2} L ${cx - 1.3} ${cy + 3.4} L ${cx + 4.8} ${cy - 3.2}`} fill="none" stroke="white" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                      )}
+                    </g>
                   );
                 })}
               </svg>
             </TransformComponent>
+
+            {zoomedIn && <MiniMap section={section} view={view} />}
+
+            {tip && (
+              <div
+                role="tooltip"
+                className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full rounded-xl bg-strong px-3 py-2 text-xs whitespace-nowrap text-white shadow-lg"
+                style={{ left: tip.x, top: tip.y - 8 }}
+              >
+                <span className="block font-semibold">
+                  {tier.name} · {seatLabel(tip.seat)}
+                </span>
+                <span className="text-white/75">{tip.seat.taken ? "Ocupada" : selected.has(tip.seat.id) ? `Elegida · ${price}` : price}</span>
+              </div>
+            )}
+
             <div className="absolute right-3 bottom-3 z-10 flex gap-0.5 rounded-2xl border border-border bg-background p-1 shadow-sm">
               <button type="button" aria-label="Acercar" onClick={() => zoomIn()} className={controlClass}>
                 <PlusIcon className="size-[18px]" aria-hidden />
@@ -151,20 +266,26 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
         )}
       </TransformWrapper>
 
-      <ul aria-label="Leyenda" className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted-foreground">
+      <ul aria-label="Leyenda" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-muted-foreground">
         <li className="flex items-center gap-1.5">
-          <span className="size-3.5 rounded-[4px] border-[1.5px] border-[#818cf8] bg-white" aria-hidden />
-          Disponible
+          <span className="size-3.5 rounded-full" style={{ background: tier.color }} aria-hidden />
+          Disponible · {price}
         </li>
         <li className="flex items-center gap-1.5">
-          <span className="size-3.5 rounded-[4px] bg-primary" aria-hidden />
-          Seleccionada
+          <span className="flex size-3.5 items-center justify-center rounded-full" style={{ background: SELECTED_FILL }} aria-hidden>
+            <svg viewBox="0 0 10 10" className="size-2.5">
+              <path d="M2 5.2 L4.2 7.3 L8 3" fill="none" stroke="white" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          Elegida
         </li>
         <li className="flex items-center gap-1.5">
-          <span className="size-3.5 rounded-[4px] bg-border" aria-hidden />
+          <span className="size-3.5 rounded-full" style={{ background: TAKEN_FILL }} aria-hidden />
           Ocupada
         </li>
-        <li className="ml-auto hidden text-xs sm:block">Arrastra para moverte · usa + / − para acercar</li>
+        <li className="ml-auto hidden text-xs sm:block" aria-live="polite">
+          {atLimit ? "Llegaste al máximo de esta zona" : selectedCount ? `${selectedCount} elegida${selectedCount > 1 ? "s" : ""}` : "Arrastra para moverte · + / − para acercar"}
+        </li>
       </ul>
     </div>
   );

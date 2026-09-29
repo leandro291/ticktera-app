@@ -30,9 +30,9 @@ describe("getCartSummary", () => {
 describe("formatting", () => {
   it("AC7: groups seats by row", () => {
     const seats = [
-      { id: "a", row: "D", number: 4, x: 0, y: 0, taken: false },
-      { id: "b", row: "C", number: 13, x: 0, y: 0, taken: false },
-      { id: "c", row: "C", number: 12, x: 0, y: 0, taken: false },
+      { id: "a", row: "D", number: 4, cx: 0, cy: 0, taken: false },
+      { id: "b", row: "C", number: 13, cx: 0, cy: 0, taken: false },
+      { id: "c", row: "C", number: 12, cx: 0, cy: 0, taken: false },
     ];
     expect(formatSeatList(seats)).toBe("Fila C · 12, 13 · Fila D · 4");
   });

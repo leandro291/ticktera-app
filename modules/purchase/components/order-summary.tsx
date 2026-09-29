@@ -49,7 +49,7 @@ export function OrderSummary({ summary, currency, continueHref }: OrderSummaryPr
         </ul>
       ) : (
         <p className="rounded-2xl border-[1.5px] border-dashed border-input p-5 text-center text-sm leading-normal text-muted-foreground">
-          Todavía no elegiste entradas. Toca una zona o usa los botones +.
+          Todavía no elegiste entradas. Empieza eligiendo una zona.
         </p>
       )}
       <div className="flex items-baseline justify-between border-t-[1.5px] border-dashed border-input pt-[18px]">

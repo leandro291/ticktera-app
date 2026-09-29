@@ -9,6 +9,8 @@ interface CartState {
   lines: Record<string, CartLine>;
   setQuantity: (eventId: string, zoneId: string, quantity: number) => void;
   toggleSeat: (eventId: string, zoneId: string, seat: Pick<Seat, "id" | "taken">) => void;
+  /** Replaces the seats of a numbered zone (e.g. "Mejores disponibles"), capped at the per-zone limit. */
+  setSeats: (eventId: string, zoneId: string, seatIds: string[]) => void;
   clear: () => void;
 }
 
@@ -46,6 +48,12 @@ export const useCartStore = create<CartState>()(
           if (!selected && (seat.taken || seatIds.length >= MAX_TICKETS_PER_ZONE)) return state;
           const next = selected ? seatIds.filter((id) => id !== seat.id) : [...seatIds, seat.id];
           return { eventId, lines: withLine(lines, { zoneId, quantity: next.length, seatIds: next }) };
+        }),
+
+      setSeats: (eventId, zoneId, seatIds) =>
+        set((state) => {
+          const next = [...new Set(seatIds)].slice(0, MAX_TICKETS_PER_ZONE);
+          return { eventId, lines: withLine(linesFor(state, eventId), { zoneId, quantity: next.length, seatIds: next }) };
         }),
 
       clear: () => set({ eventId: null, lines: {} }),
