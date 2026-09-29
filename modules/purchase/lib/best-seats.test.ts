@@ -1,36 +1,20 @@
 import { describe, expect, it } from "vitest";
-import type { SeatSection } from "../types/venue";
+import type { Seat, SeatSection } from "../types/venue";
 import { pickBestSeats } from "./best-seats";
-import { buildSeatSection, SEAT_R } from "./seat-layout";
+import { SEAT_PITCH } from "./seat-layout";
 
-/** 3 rows × 10 seats (aisle after seat 8), every seat free unless listed as "A-3" etc. */
-function section(taken: string[] = [], curve = 0): SeatSection {
-  const base = buildSeatSection("test", "z", { rows: 3, seatsPerRow: 10 }, "available", curve);
-  return { ...base, seats: base.seats.map((s) => ({ ...s, taken: taken.includes(`${s.row}-${s.number}`) })) };
+/** Synthetic 3 rows × 10 seats (aisle after seat 8); seats listed as "A-3" etc. are taken. */
+function section(taken: string[] = []): SeatSection {
+  const seats: Seat[] = [];
+  for (const [r, row] of ["A", "B", "C"].entries()) {
+    for (let n = 1; n <= 10; n++) {
+      seats.push({ id: `z-${row}-${n}`, row, number: n, cx: n * SEAT_PITCH + (n > 8 ? 26 : 0), cy: r * 30, taken: taken.includes(`${row}-${n}`) });
+    }
+  }
+  const rows = ["A", "B", "C"].map((label) => ({ label, start: { x: 0, y: 0 }, end: { x: 0, y: 0 } }));
+  return { zoneId: "z", width: 400, height: 120, stage: { cx: 0, cy: 0, r: 0 }, outline: "", neighbors: [], focus: { x: 0, y: 0, width: 0, height: 0 }, anchor: { x: 0, y: 0 }, rows, seats };
 }
 const ids = (...names: string[]) => names.map((n) => `z-${n}`);
-
-describe("buildSeatSection", () => {
-  it("AC15: straight rows share a y; the aisle widens the gap between seats 8 and 9", () => {
-    const s = section();
-    const rowA = s.seats.filter((x) => x.row === "A");
-    expect(new Set(rowA.map((x) => x.cy)).size).toBe(1);
-    const gap = (a: number, b: number) => rowA[b - 1].cx - rowA[a - 1].cx;
-    expect(gap(8, 9)).toBeGreaterThan(gap(7, 8));
-  });
-
-  it("AC15: curved rows bend their edges towards the stage and every seat fits below it", () => {
-    const s = section([], 0.6);
-    const rowA = s.seats.filter((x) => x.row === "A");
-    const middle = rowA[4];
-    expect(rowA[0].cy).toBeLessThan(middle.cy);
-    expect(rowA[9].cy).toBeLessThan(middle.cy);
-    for (const seat of s.seats) {
-      expect(seat.cy - SEAT_R).toBeGreaterThan(s.stage.y + s.stage.height);
-      expect(seat.cx + SEAT_R).toBeLessThanOrEqual(s.width);
-    }
-  });
-});
 
 describe("pickBestSeats", () => {
   it("AC16: takes adjacent seats in the front row, as centred as possible", () => {

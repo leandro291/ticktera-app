@@ -20,8 +20,8 @@ export function buildEventVenue(event: Pick<EventDetail, "id" | "venueLayoutId" 
   }));
 
   const sections: SeatSection[] = tiers
-    .filter((t) => t.kind === "numbered" && t.seating)
-    .map((t) => buildSeatSection(event.id, t.id, t.seating!, t.status, layout.seatCurve));
+    .filter((t) => t.kind === "numbered")
+    .map((t) => buildSeatSection(event.id, t, layout, t.status));
 
   return { eventId: event.id, currency: event.currency, layout, tiers, sections };
 }

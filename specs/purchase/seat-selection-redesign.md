@@ -148,6 +148,16 @@ export function pickBestSeats(section: SeatSection, count: number, alreadySelect
   - Detalles visuales: escenario con degradado, luces al borde y un resplandor suave. Las zonas llevan separación redondeada y la resaltada se eleva con un contorno.
   - Las etiquetas son HTML sobre el SVG para que se lean en móvil; las zonas con entradas elegidas muestran "✓ N".
   - El escenario del mapa de butacas también es media luna.
+- **Mapa de butacas como zoom del recinto (ajuste posterior, 2026-09-29):**
+  - Pedido por el equipo: el mapa de butacas no se correspondía con el de zonas, porque mostraba una grilla recta bajo un escenario genérico.
+  - Ahora `buildSeatSection` genera las butacas desde el arco de la zona, con la misma escala para todo el recinto (`SEAT_MAP_SCALE`).
+    - Las filas son arcos concéntricos alrededor del escenario, con la fila A al frente.
+    - Las filas externas tienen más butacas y los pasillos son radiales, alineados entre filas.
+    - `seating` (filas × butacas) desaparece de los datos.
+  - El lienzo es el recinto completo: el escenario media luna en su posición real, las demás zonas tenues con su nombre y la zona elegida tintada con su contorno.
+  - La vista abre encuadrada en las butacas de la zona (`focus`). En móvil, con zoom mínimo táctil, se centra en `anchor`, el punto medio del arco.
+  - El botón "Encuadrar la zona" vuelve a ese encuadre, y el minimapa muestra dónde estás dentro del recinto.
+  - Con ↑/↓ el teclado va a la butaca más cercana de la fila vecina.
 - **Pasos:**
   - `ZonePicker` combina el mapa y las tarjetas de zona sincronizadas; el mapa muestra las zonas agotadas rayadas.
   - Una zona general abre `GaQuantity` en el mismo panel.

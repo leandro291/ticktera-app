@@ -24,17 +24,14 @@ export interface VenueZone {
   textColor: string;
   /** Price multiplier over the event's `priceFrom`. */
   priceFactor: number;
-  /** Seat grid for numbered zones. */
-  seating?: { rows: number; seatsPerRow: number };
 }
 
 export interface VenueLayout {
   id: VenueLayoutId;
   /** Radius of the half-moon stage on the zone map. */
   stageRadius: number;
+  /** Numbered zones get their seats from their arc; general admission zones have none. */
   zones: VenueZone[];
-  /** How much seat rows bend around the stage: 0 = straight (tribunes), 1 = tight arc (theaters). */
-  seatCurve?: number;
 }
 
 /** A zone as sold for a specific event. */
@@ -65,12 +62,38 @@ export interface SeatRow {
   end: Point;
 }
 
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** Another zone drawn faintly around the seats, so the seat map reads as a zoom of the venue map. */
+export interface NeighborZone {
+  zoneId: string;
+  name: string;
+  path: string;
+  label: Point;
+}
+
+/**
+ * Seat map of a numbered zone, in SVG pixels. It is the venue map scaled up: the half-moon stage sits where it is
+ * on the venue, the zone keeps its ring-sector outline and the neighbouring zones give context.
+ */
 export interface SeatSection {
   zoneId: string;
   width: number;
   height: number;
-  /** Stage band at the top; `curve` > 0 draws its front edge as an arc. */
-  stage: { x: number; y: number; width: number; height: number; curve: number };
+  /** Half-moon stage: centre of its flat back wall and radius. */
+  stage: { cx: number; cy: number; r: number };
+  /** Ring-sector outline of this zone. */
+  outline: string;
+  neighbors: NeighborZone[];
+  /** Area to frame when the map opens (the zone's seats). */
+  focus: Box;
+  /** Middle of the zone's band: the view centres here when the whole zone doesn't fit (arcs are hollow in their box). */
+  anchor: Point;
   /** Front (closest to the stage) to back. */
   rows: SeatRow[];
   seats: Seat[];

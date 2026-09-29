@@ -1,18 +1,22 @@
 import type { AvailabilityStatus } from "@/modules/event";
-import type { Point, Seat, SeatRow, SeatSection } from "../types/venue";
+import type { Box, Point, Seat, SeatRow, SeatSection, VenueLayout, VenueZone, ZoneArc } from "../types/venue";
+import { polar, sectorCentroid, sectorPath } from "./venue-geometry";
 
-/** Seat radius (22px circles) and centre-to-centre spacing. */
+/** Seat radius (22px circles) and centre-to-centre spacing along a row. */
 export const SEAT_R = 11;
 export const SEAT_PITCH = 28;
 const ROW_PITCH = 30;
-const AISLE_EVERY = 8;
-const AISLE_GAP = 16;
+/** Pixels per venue-map unit: the seat map is the venue map at this zoom, for every zone. */
+export const SEAT_MAP_SCALE = 1.7;
+/** Space between the zone's outline and its outer seats. */
+const EDGE_PAD = 14;
+/** Radial aisles: one roughly every `BLOCK_DEG` degrees, `AISLE` px wide. */
+const BLOCK_DEG = 24;
+const AISLE = 26;
 /** Distance from the outer seat's centre to its row letter. */
-const LABEL_OFFSET = SEAT_R + 14;
-const MARGIN = 16;
-/** Depth of the half-moon stage and its gap to the first row. */
-const STAGE_H = 64;
-const STAGE_GAP = 26;
+const LABEL_OFFSET = SEAT_R + 13;
+const MARGIN = 28;
+const FOCUS_PAD = 18;
 
 const TAKEN_RATIO: Record<AvailabilityStatus, number> = {
   available: 0.35,
@@ -32,66 +36,94 @@ function seededRandom(seed: string) {
 }
 
 const rowLabel = (index: number) => String.fromCharCode(65 + index);
+const toDeg = (rad: number) => (rad * 180) / Math.PI;
+const round = (n: number) => Math.round(n * 10) / 10;
+const ORIGIN: Point = { x: 0, y: 0 };
 
-/**
- * Maps a position along a row (`along`, 0 = row centre) to the plane. Straight rows keep `along` as x; curved rows
- * wrap it on concentric arcs around a point above the stage, so edges bend towards it like a theatre.
- */
-function rowProjector(curve: number, halfSpan: number) {
-  if (curve <= 0) return (along: number, row: number): Point => ({ x: along, y: row * ROW_PITCH });
-  const frontRadius = halfSpan / (curve * 1.1);
-  return (along: number, row: number): Point => {
-    const radius = frontRadius + row * ROW_PITCH;
-    const angle = along / radius;
-    return { x: radius * Math.sin(angle), y: radius * Math.cos(angle) - frontRadius };
-  };
+const scaleArc = (arc: ZoneArc): ZoneArc => ({ ...arc, inner: arc.inner * SEAT_MAP_SCALE, outer: arc.outer * SEAT_MAP_SCALE });
+
+/** Points along a sector's outline, to measure its bounding box. */
+function outlinePoints(arc: ZoneArc): Point[] {
+  const points: Point[] = [];
+  for (let a = arc.from; a <= arc.to; a += 2) points.push(polar(arc.inner, a, ORIGIN), polar(arc.outer, a, ORIGIN));
+  points.push(polar(arc.inner, arc.to, ORIGIN), polar(arc.outer, arc.to, ORIGIN));
+  return points;
 }
 
-export function buildSeatSection(
-  seed: string,
-  zoneId: string,
-  seating: { rows: number; seatsPerRow: number },
-  status: AvailabilityStatus,
-  curve = 0,
-): SeatSection {
-  const random = seededRandom(`${seed}:${zoneId}`);
-  const aisles = Math.floor((seating.seatsPerRow - 1) / AISLE_EVERY);
-  const span = (seating.seatsPerRow - 1) * SEAT_PITCH + aisles * AISLE_GAP;
-  const alongOf = (s: number) => s * SEAT_PITCH + Math.floor(s / AISLE_EVERY) * AISLE_GAP - span / 2;
-  const project = rowProjector(curve, span / 2);
+/** Angles (degrees) of the seats of one row: blocks of seats split by radial aisles, centred in each block. */
+function rowAngles(arc: ZoneArc, radius: number): number[] {
+  const blocks = Math.max(1, Math.round((arc.to - arc.from) / BLOCK_DEG));
+  const blockSpan = (arc.to - arc.from) / blocks;
+  const step = toDeg(SEAT_PITCH / radius);
+  const angles: number[] = [];
+  for (let b = 0; b < blocks; b++) {
+    const padStart = toDeg(((b === 0 ? EDGE_PAD : AISLE / 2) + SEAT_R) / radius);
+    const padEnd = toDeg(((b === blocks - 1 ? EDGE_PAD : AISLE / 2) + SEAT_R) / radius);
+    const start = arc.from + b * blockSpan + padStart;
+    const end = arc.from + (b + 1) * blockSpan - padEnd;
+    if (end < start) continue;
+    const count = Math.floor((end - start) / step) + 1;
+    const mid = (start + end) / 2;
+    for (let i = 0; i < count; i++) angles.push(mid + (i - (count - 1) / 2) * step);
+  }
+  return angles;
+}
+
+function boundsOf(points: Point[], pad = 0): Box {
+  const xs = points.map((p) => p.x);
+  const ys = points.map((p) => p.y);
+  const x = Math.min(...xs) - pad;
+  const y = Math.min(...ys) - pad;
+  return { x, y, width: Math.max(...xs) + pad - x, height: Math.max(...ys) + pad - y };
+}
+
+/**
+ * Seat map of a numbered zone. Rows are concentric arcs inside the zone's ring sector (front row closest to the
+ * stage), outer rows hold more seats and radial aisles line up across rows, like a real amphitheatre.
+ */
+export function buildSeatSection(seed: string, zone: VenueZone, layout: VenueLayout, status: AvailabilityStatus): SeatSection {
+  const random = seededRandom(`${seed}:${zone.id}`);
+  const arc = scaleArc(zone.arc);
+  const stageR = layout.stageRadius * SEAT_MAP_SCALE;
+
+  const usable = arc.outer - arc.inner - 2 * (EDGE_PAD + SEAT_R);
+  const rowCount = Math.max(1, Math.floor(usable / ROW_PITCH) + 1);
+  const firstRadius = arc.inner + (arc.outer - arc.inner - (rowCount - 1) * ROW_PITCH) / 2;
 
   const rawSeats: Seat[] = [];
   const rawRows: SeatRow[] = [];
-  for (let r = 0; r < seating.rows; r++) {
+  for (let r = 0; r < rowCount; r++) {
     const label = rowLabel(r);
-    rawRows.push({
-      label,
-      start: project(alongOf(0) - LABEL_OFFSET, r),
-      end: project(alongOf(seating.seatsPerRow - 1) + LABEL_OFFSET, r),
+    const radius = firstRadius + r * ROW_PITCH;
+    const angles = rowAngles(arc, radius);
+    if (!angles.length) continue;
+    const labelShift = toDeg(LABEL_OFFSET / radius);
+    rawRows.push({ label, start: polar(radius, angles[0] - labelShift, ORIGIN), end: polar(radius, angles[angles.length - 1] + labelShift, ORIGIN) });
+    angles.forEach((angle, i) => {
+      const p = polar(radius, angle, ORIGIN);
+      rawSeats.push({ id: `${zone.id}-${label}-${i + 1}`, row: label, number: i + 1, cx: p.x, cy: p.y, taken: random() < TAKEN_RATIO[status] });
     });
-    for (let s = 0; s < seating.seatsPerRow; s++) {
-      const { x, y } = project(alongOf(s), r);
-      rawSeats.push({ id: `${zoneId}-${label}-${s + 1}`, row: label, number: s + 1, cx: x, cy: y, taken: random() < TAKEN_RATIO[status] });
-    }
   }
 
-  // Fit everything (seats + row letters) into a box below the stage.
-  const xs = [...rawSeats.map((s) => s.cx), ...rawRows.flatMap((r) => [r.start.x, r.end.x])];
-  const ys = [...rawSeats.map((s) => s.cy), ...rawRows.flatMap((r) => [r.start.y, r.end.y])];
-  const minX = Math.min(...xs) - SEAT_R;
-  const minY = Math.min(...ys) - SEAT_R;
-  const dx = MARGIN - minX;
-  const dy = MARGIN + STAGE_H + STAGE_GAP - minY;
-  const width = Math.ceil(Math.max(...xs) + SEAT_R + dx + MARGIN);
-  const height = Math.ceil(Math.max(...ys) + SEAT_R + dy + MARGIN);
-  const move = (p: Point): Point => ({ x: round(p.x + dx), y: round(p.y + dy) });
+  // Canvas: the whole venue (stage + every zone), so zooming out shows where the zone sits; the view opens on `focus`.
+  const seatPoints = [...rawSeats.flatMap((s) => [{ x: s.cx - SEAT_R, y: s.cy - SEAT_R }, { x: s.cx + SEAT_R, y: s.cy + SEAT_R }]), ...rawRows.flatMap((r) => [r.start, r.end])];
+  const venuePoints = layout.zones.flatMap((z) => outlinePoints(scaleArc(z.arc)));
+  const box = boundsOf([...venuePoints, ...seatPoints, { x: -stageR, y: 0 }, { x: stageR, y: stageR }], MARGIN);
+  const center: Point = { x: -box.x, y: -box.y };
+  const move = (p: Point): Point => ({ x: round(p.x + center.x), y: round(p.y + center.y) });
+  const focus = boundsOf(seatPoints.map(move), FOCUS_PAD);
 
-  const stageWidth = Math.round(width * 0.5);
   return {
-    zoneId,
-    width,
-    height,
-    stage: { x: Math.round((width - stageWidth) / 2), y: MARGIN, width: stageWidth, height: STAGE_H, curve },
+    zoneId: zone.id,
+    width: Math.ceil(box.width),
+    height: Math.ceil(box.height),
+    stage: { cx: round(center.x), cy: round(center.y), r: round(stageR) },
+    outline: sectorPath(arc, center),
+    neighbors: layout.zones
+      .filter((z) => z.id !== zone.id)
+      .map((z) => ({ zoneId: z.id, name: z.name, path: sectorPath(scaleArc(z.arc), center), label: move(sectorCentroid(scaleArc(z.arc), ORIGIN)) })),
+    focus,
+    anchor: move(sectorCentroid(arc, ORIGIN)),
     rows: rawRows.map((r) => ({ label: r.label, start: move(r.start), end: move(r.end) })),
     seats: rawSeats.map((s) => {
       const p = move({ x: s.cx, y: s.cy });
@@ -99,5 +131,3 @@ export function buildSeatSection(
     }),
   };
 }
-
-const round = (n: number) => Math.round(n * 10) / 10;

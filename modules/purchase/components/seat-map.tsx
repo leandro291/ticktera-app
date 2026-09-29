@@ -1,13 +1,13 @@
 "use client";
 
 import { useId, useMemo, useRef, useState } from "react";
-import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
+import { TransformComponent, TransformWrapper, type ReactZoomPanPinchRef } from "react-zoom-pan-pinch";
 import { MaximizeIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { formatPrice, type Currency } from "@/modules/event";
 import { cn } from "@/lib/utils";
 import { SEAT_R } from "../lib/seat-layout";
 import { halfMoonPath } from "../lib/venue-geometry";
-import type { Seat, SeatSection, ZoneTier } from "../types/venue";
+import type { Box, Point, Seat, SeatSection, ZoneTier } from "../types/venue";
 
 interface SeatMapProps {
   tier: ZoneTier;
@@ -17,16 +17,19 @@ interface SeatMapProps {
   /** True when the zone reached the per-zone limit: free seats can't be added. */
   atLimit: boolean;
   onToggle: (seat: Seat) => void;
-  /** Initial framing: `overview` fits the whole section; `touch` starts at a finger-sized seat scale (phones). */
+  /** Initial framing of the zone: `overview` fits all its seats; `touch` keeps seats finger-sized (phones). */
   framing?: "overview" | "touch";
   className?: string;
 }
 
-/** ~24px seats: comfortable to tap while still showing context. */
-const TOUCH_SCALE = 1.1;
+/** Smallest seat scale when framing on phones (~20px seats). */
+const TOUCH_MIN_SCALE = 0.9;
+const MAX_SCALE = 4;
 const TAKEN_FILL = "#e4e4e7";
 const TAKEN_MARK = "#a1a1aa";
 const SELECTED_FILL = "#18181b";
+/** Thin edge so light zone colours still read as seats. */
+const SEAT_EDGE = "rgba(30,27,75,.28)";
 
 type Direction = "ArrowLeft" | "ArrowRight" | "ArrowUp" | "ArrowDown";
 
@@ -49,15 +52,13 @@ const controlClass = "flex size-10 items-center justify-center rounded-xl text-f
 
 export const seatLabel = (seat: Pick<Seat, "row" | "number">) => `Fila ${seat.row} · Asiento ${seat.number}`;
 
-/** Half-moon stage (same look as the zone map): flat back wall, round front edge with footlights. */
+/** Half-moon stage (same look as the zone map): back wall, gradient, footlights along the front edge. */
 function Stage({ stage }: { stage: SeatSection["stage"] }) {
   const gradientId = `tk-seat-stage-${useId()}`;
-  const { x, y, width, height } = stage;
-  const cx = x + width / 2;
-  const rx = width / 2;
-  const lights = Array.from({ length: 9 }, (_, i) => {
-    const t = ((i + 1) / 10) * Math.PI;
-    return { x: cx - Math.cos(t) * (rx - 10), y: y + Math.sin(t) * (height - 8) };
+  const { cx, cy, r } = stage;
+  const lights = Array.from({ length: 11 }, (_, i) => {
+    const t = ((i + 1) / 12) * Math.PI;
+    return { x: cx - Math.cos(t) * (r - 12), y: cy + Math.sin(t) * (r - 12) };
   });
   return (
     <g aria-hidden>
@@ -67,21 +68,40 @@ function Stage({ stage }: { stage: SeatSection["stage"] }) {
           <stop offset="100%" stopColor="#3730a3" />
         </linearGradient>
       </defs>
-      <path d={halfMoonPath(cx, y - 1, rx + 5, height + 5)} fill="#c7d2fe" opacity={0.5} />
-      <path d={halfMoonPath(cx, y, rx, height)} fill={`url(#${gradientId})`} />
+      <path d={halfMoonPath(cx, cy, r + 9)} fill="#c7d2fe" opacity={0.45} />
+      <path d={halfMoonPath(cx, cy, r)} fill={`url(#${gradientId})`} />
+      <path d={`M ${cx - r + 26} ${cy} A ${r - 26} ${r - 26} 0 0 0 ${cx + r - 26} ${cy}`} fill="none" stroke="#6366f1" strokeWidth={2} opacity={0.55} />
       {lights.map((p, i) => (
-        <circle key={i} cx={p.x} cy={p.y} r={2.6} fill="#fde68a" opacity={0.9} />
+        <circle key={i} cx={p.x} cy={p.y} r={4} fill="#fde68a" opacity={0.9} />
       ))}
-      <text x={cx} y={y + height * 0.42} dominantBaseline="central" textAnchor="middle" className="fill-white text-[11px] font-bold tracking-[0.2em]">
+      <rect x={cx - r - 14} y={cy - 16} width={2 * r + 28} height={16} rx={6} fill="#1e1b4b" />
+      <text x={cx} y={cy + r * 0.45} dominantBaseline="central" textAnchor="middle" className="fill-white text-[16px] font-bold tracking-[0.24em]">
         ESCENARIO
       </text>
     </g>
   );
 }
 
-/** Whole-section thumbnail with the visible area, shown while zoomed in (desktop). */
-function MiniMap({ section, view }: { section: SeatSection; view: View }) {
-  const w = 132;
+/** The rest of the venue, drawn faintly with its zone names, so the seats read in context. */
+function VenueContext({ section, color }: { section: SeatSection; color: string }) {
+  return (
+    <g aria-hidden>
+      {section.neighbors.map((n) => (
+        <g key={n.zoneId}>
+          <path d={n.path} fill="#f4f4f5" stroke="#e4e4e7" strokeWidth={2} strokeLinejoin="round" />
+          <text x={n.label.x} y={n.label.y} dominantBaseline="central" textAnchor="middle" className="fill-zinc-400 text-[15px] font-semibold">
+            {n.name}
+          </text>
+        </g>
+      ))}
+      <path d={section.outline} fill={color} fillOpacity={0.12} stroke={color} strokeWidth={2.5} strokeLinejoin="round" />
+    </g>
+  );
+}
+
+/** Whole-venue thumbnail with the visible area, shown while zoomed in (desktop). */
+function MiniMap({ section, color, view }: { section: SeatSection; color: string; view: View }) {
+  const w = 150;
   const k = w / section.width;
   const h = section.height * k;
   const rect = {
@@ -92,13 +112,27 @@ function MiniMap({ section, view }: { section: SeatSection; view: View }) {
   };
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden className="absolute top-3 left-3 z-10 hidden rounded-lg border border-border bg-background/95 shadow-sm lg:block">
-      <path d={halfMoonPath((section.stage.x + section.stage.width / 2) * k, section.stage.y * k, (section.stage.width / 2) * k, section.stage.height * k)} className="fill-stage" />
-      {section.seats.map((s) => (
-        <circle key={s.id} cx={s.cx * k} cy={s.cy * k} r={Math.max(0.9, SEAT_R * k)} className={s.taken ? "fill-border" : "fill-indigo-300"} />
-      ))}
-      <rect {...rect} rx={2} className="fill-primary/10 stroke-primary" strokeWidth={1.25} />
+      <g transform={`scale(${k})`}>
+        {section.neighbors.map((n) => (
+          <path key={n.zoneId} d={n.path} fill="#e4e4e7" />
+        ))}
+        <path d={section.outline} fill={color} />
+        <path d={halfMoonPath(section.stage.cx, section.stage.cy, section.stage.r)} className="fill-stage" />
+      </g>
+      <rect {...rect} rx={2} className="fill-primary/10 stroke-primary" strokeWidth={1.5} />
     </svg>
   );
+}
+
+/**
+ * Transform that frames `box` in a `width`×`height` viewport. When `minScale` forces a closer view than the box
+ * allows, it centres on `anchor` instead (the box centre of an arc can fall outside the zone).
+ */
+function frameTransform(box: Box, anchor: Point, width: number, height: number, minScale: number) {
+  const fit = Math.min(width / box.width, height / box.height);
+  const scale = Math.min(MAX_SCALE, Math.max(minScale, fit));
+  const center = scale > fit ? anchor : { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  return { scale, x: width / 2 - center.x * scale, y: height / 2 - center.y * scale };
 }
 
 export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onToggle, framing = "overview", className }: SeatMapProps) {
@@ -125,9 +159,11 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
   const move = (seat: Seat, key: Direction) => {
     const r = rows.findIndex((row) => row[0]?.row === seat.row);
     const c = rows[r].findIndex((s) => s.id === seat.id);
-    const [nr, nc] = { ArrowLeft: [r, c - 1], ArrowRight: [r, c + 1], ArrowUp: [r - 1, c], ArrowDown: [r + 1, c] }[key];
-    const target = rows[nr]?.[Math.min(nc, (rows[nr]?.length ?? 1) - 1)];
-    if (!target || nc < 0) return;
+    const distance = (s: Seat) => Math.hypot(s.cx - seat.cx, s.cy - seat.cy);
+    // Rows hold different seat counts (outer arcs are longer): up/down goes to the nearest seat of that row.
+    const nearestIn = (row: Seat[] | undefined) => row?.reduce((a, b) => (distance(b) < distance(a) ? b : a));
+    const target = { ArrowLeft: rows[r][c - 1], ArrowRight: rows[r][c + 1], ArrowUp: nearestIn(rows[r - 1]), ArrowDown: nearestIn(rows[r + 1]) }[key];
+    if (!target) return;
     setFocusedId(target.id);
     seatRefs.current.get(target.id)?.focus();
   };
@@ -142,18 +178,29 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
     }
   };
 
-  // The minimap only helps once the section no longer fits in the frame.
+  // The minimap only helps once the whole venue no longer fits in the frame.
   const zoomedIn = view !== null && view.scale > Math.min(view.width / section.width, view.height / section.height) * 1.15;
+  const minFrameScale = framing === "touch" ? TOUCH_MIN_SCALE : 0.2;
+
+  /** Frames the zone's seats (on open and with the "Encuadrar la zona" button). */
+  const frameZone = (ref: ReactZoomPanPinchRef, animationTime = 0) => {
+    const wrapper = ref.instance.wrapperComponent;
+    if (!wrapper?.clientWidth) {
+      requestAnimationFrame(() => frameZone(ref, animationTime));
+      return;
+    }
+    const t = frameTransform(section.focus, section.anchor, wrapper.clientWidth, wrapper.clientHeight, minFrameScale);
+    ref.setTransform(t.x, t.y, t.scale, animationTime);
+  };
 
   return (
-    <div className={cn("flex flex-col gap-3", className)}>
+    <div className={cn("flex min-h-0 flex-col gap-3", className)}>
       <TransformWrapper
-        minScale={0.3}
-        maxScale={4}
-        fitOnInit={framing === "overview" ? "contain" : undefined}
-        initialScale={framing === "touch" ? TOUCH_SCALE : undefined}
-        centerOnInit
+        minScale={0.15}
+        maxScale={MAX_SCALE}
+        limitToBounds={false}
         doubleClick={{ disabled: true }}
+        onInit={(ref) => frameZone(ref)}
         onTransform={(ref, state) =>
           setView({
             scale: state.scale,
@@ -172,8 +219,15 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
         }}
         onZoomStart={() => setTip(null)}
       >
-        {({ zoomIn, zoomOut, resetTransform }) => (
-          <div ref={frameRef} className="relative flex min-h-[340px] grow flex-col overflow-hidden rounded-2xl border border-border bg-surface lg:min-h-[420px]">
+        {(ref) => (
+          <div
+            ref={frameRef}
+            // Fixed frame: the canvas is the whole venue, so it must never size the frame (phones fill the sheet instead).
+            className={cn(
+              "relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface",
+              framing === "touch" ? "min-h-[300px] flex-1 basis-0" : "h-[440px] lg:h-[480px]",
+            )}
+          >
             <TransformComponent wrapperClass="size-full! grow cursor-grab active:cursor-grabbing">
               <svg
                 width={section.width}
@@ -183,6 +237,7 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
                 aria-label={`Butacas de ${tier.name}`}
                 className="touch-none select-none"
               >
+                <VenueContext section={section} color={tier.color} />
                 <Stage stage={section.stage} />
                 {section.rows.map((row) => (
                   <g key={row.label} className="fill-muted-foreground text-[11px] font-semibold" aria-hidden>
@@ -236,7 +291,8 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
                         cy={cy}
                         r={SEAT_R}
                         fill={seat.taken ? TAKEN_FILL : isSelected ? SELECTED_FILL : tier.color}
-                        className={cn(!disabled && !isSelected && "stroke-strong/0 stroke-2 transition-[stroke] group-hover:stroke-strong")}
+                        stroke={seat.taken || isSelected ? undefined : SEAT_EDGE}
+                        className={cn(!disabled && !isSelected && "stroke-1 transition-[stroke,stroke-width] group-hover:stroke-strong group-hover:stroke-2")}
                       />
                       {seat.taken && (
                         <path d={`M ${cx - 3.5} ${cy - 3.5} L ${cx + 3.5} ${cy + 3.5} M ${cx + 3.5} ${cy - 3.5} L ${cx - 3.5} ${cy + 3.5}`} stroke={TAKEN_MARK} strokeWidth={1.6} strokeLinecap="round" />
@@ -250,7 +306,7 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
               </svg>
             </TransformComponent>
 
-            {zoomedIn && <MiniMap section={section} view={view} />}
+            {zoomedIn && <MiniMap section={section} color={tier.color} view={view} />}
 
             {tip && (
               <div
@@ -266,13 +322,13 @@ export function SeatMap({ tier, section, currency, selectedSeatIds, atLimit, onT
             )}
 
             <div className="absolute right-3 bottom-3 z-10 flex gap-0.5 rounded-2xl border border-border bg-background p-1 shadow-sm">
-              <button type="button" aria-label="Acercar" onClick={() => zoomIn()} className={controlClass}>
+              <button type="button" aria-label="Acercar" onClick={() => ref.zoomIn()} className={controlClass}>
                 <PlusIcon className="size-[18px]" aria-hidden />
               </button>
-              <button type="button" aria-label="Alejar" onClick={() => zoomOut()} className={controlClass}>
+              <button type="button" aria-label="Alejar" onClick={() => ref.zoomOut()} className={controlClass}>
                 <MinusIcon className="size-[18px]" aria-hidden />
               </button>
-              <button type="button" aria-label="Ver mapa completo" onClick={() => resetTransform()} className={controlClass}>
+              <button type="button" aria-label="Encuadrar la zona" onClick={() => frameZone(ref, 300)} className={controlClass}>
                 <MaximizeIcon className="size-4" aria-hidden />
               </button>
             </div>
