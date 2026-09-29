@@ -21,7 +21,7 @@ interface TicketSelectionProps {
   venue: EventVenue;
 }
 
-const CHECKOUT_HREF = "/checkout";
+
 
 export function TicketSelection({ event, venue }: TicketSelectionProps) {
   const cart = useEventCart(venue);
@@ -143,11 +143,11 @@ export function TicketSelection({ event, venue }: TicketSelectionProps) {
             />
           </div>
 
-          <OrderSummary summary={cart.summary} currency={venue.currency} continueHref={CHECKOUT_HREF} />
+          <OrderSummary summary={cart.summary} currency={venue.currency} continueHref={`/checkout?event=${event.id}`} />
         </div>
       </div>
 
-      <OrderSummaryBar summary={cart.summary} currency={venue.currency} continueHref={CHECKOUT_HREF} />
+      <OrderSummaryBar summary={cart.summary} currency={venue.currency} continueHref={`/checkout?event=${event.id}`} />
 
       <Sheet open={sheetOpen && !isDesktop && Boolean(numberedTier)} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" showCloseButton={false} className="gap-0 bg-background p-0 data-[side=bottom]:h-dvh">

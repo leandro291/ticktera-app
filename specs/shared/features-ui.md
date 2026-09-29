@@ -183,13 +183,20 @@ Notas de implementación (Phase 2):
 - Butacas: `role="checkbox"`, tabindex itinerante con flechas, Enter/Espacio para alternar; arrastrar no selecciona. Desktop: encuadre completo; móvil: `Sheet` a pantalla completa con escala táctil (~24px por butaca).
 - El header de pasos vive en `modules/purchase/components/purchase-header.tsx` (solo lo usa el flujo de compra), no en `components/shared` (T9b queda cubierta).
 - Evento agotado: `/events/[id]/tickets` redirige al detalle.
-- "Continuar" enlaza a `/checkout` (Phase 3).
+- "Continuar" enlaza a `/checkout?event=<id>` (Phase 3).
 
 ### Phase 3 — Checkout + confirmación
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T9 | checkout (temporizador, comprador, pago) | modules/purchase/components/checkout-*.tsx, modules/purchase/hooks/use-countdown.ts, app/checkout/page.tsx | Phase 2 | A | AC8 | todo |
-| T10 | confirmación + QR decorativo | modules/purchase/components/purchase-confirmation.tsx, components/shared/decorative-qr.tsx, app/checkout/confirmation/page.tsx | Phase 2 | A | AC9 | todo |
+| T9 | checkout (temporizador, comprador, pago) | modules/purchase/components/checkout-view.tsx, checkout-fields.tsx, modules/purchase/hooks/use-countdown.ts, modules/purchase/lib/payment-format.ts (+test), modules/purchase/lib/order.ts (+test), modules/purchase/types/order.ts, modules/purchase/store/use-order-store.ts, app/checkout/page.tsx | Phase 2 | A | AC8 | done |
+| T10 | confirmación + QR decorativo | modules/purchase/components/purchase-confirmation.tsx, modules/purchase/lib/calendar.ts (+test), components/shared/decorative-qr.tsx, app/checkout/confirmation/page.tsx | Phase 2 | A | AC9 | done |
+
+Notas de implementación (Phase 3):
+- `/checkout?event=<id>`: el server carga evento + venue; el cliente toma las líneas del carrito de ese evento. Sin `event`, evento inexistente o carrito vacío → estado vacío con link a `/events`.
+- Pagar: validación nativa (`required` / `pattern`), formato de tarjeta `0000 0000 …` y `MM/AA`, 900 ms de "Procesando pago…", luego se guarda un `Order` inmutable en `useOrderStore.lastOrder`, se vacía el carrito y se navega a la confirmación.
+- Temporizador de 10:00; al llegar a 0 se bloquea el formulario y se ofrece volver a elegir entradas.
+- Confirmación: lee `lastOrder` (recargar la página muestra un estado vacío: no hay persistencia). "Agregar al calendario" descarga un `.ics`; "Descargar PDF" usa la impresión del navegador; "Ver mis entradas" → `/my-tickets` (Phase 4).
+- Contratos nuevos: `Order`, `OrderItem`, `PaymentMethod` (`modules/purchase/types/order.ts`).
 
 ### Phase 4 — Cuenta
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
