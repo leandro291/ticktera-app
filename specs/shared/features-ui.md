@@ -230,6 +230,7 @@ Notas de implementación (Phase 5):
 - Landing incluida (Phase 1b), reemplaza la página del template.
 - Rutas en inglés (SETUP §1).
 - Test runner: Vitest.
+- Fuente de verdad visual: Claude Design (2026-09-29). `docs/design-system.md` se reescribió con estos tokens (índigo, CTA naranja) y `specs/events/landing-page.md` queda superseded.
 
 ## Open questions
 - (ninguna)

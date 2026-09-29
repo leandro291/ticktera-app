@@ -1,7 +1,7 @@
 # Landing page (UI con mock data)
 
 - Module: events
-- Status: approved
+- Status: superseded — reemplazada por `specs/shared/features-ui.md` (Phase 1b). La fuente de verdad visual es Claude Design (decisión del equipo, 2026-09-29).
 - Approved by: lenadro291 (2026-09-28)
 - Mode: SDD
 
