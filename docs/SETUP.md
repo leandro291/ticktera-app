@@ -62,7 +62,8 @@ components/
   shared/                     # componentes reutilizables entre módulos
 hooks/                        # hooks reutilizables entre módulos
 lib/                          # utilidades transversales (cn, axios instance)
-docs/                         # documentación y specs
+docs/                         # documentación (SETUP, design system)
+specs/                        # specs SDD: specs/<module>/<feature>.md
 ```
 
 ### Ejemplo de uso
@@ -178,7 +179,7 @@ Requerimiento → Spec → Desarrollo (+ tests) → Review → Cierre
 
 **Paralelo sin conflictos:** cada tarea declara los archivos que le pertenecen (`Owns`). Las tareas de una misma fase no comparten archivos. Los archivos compartidos y las instalaciones van en una tarea de setup previa.
 
-Las specs se guardan en `docs/specs/<module>/<feature>.md`.
+Las specs se guardan en `specs/<module>/<feature>.md`.
 
 ### Agentes
 

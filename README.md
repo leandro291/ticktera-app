@@ -33,7 +33,8 @@ components/
   shared/     # reutilizables entre módulos
 hooks/        # hooks compartidos
 lib/          # utilidades transversales (cn, instancia de axios)
-docs/         # SETUP.md y specs
+docs/         # SETUP.md y design-system.md
+specs/        # specs SDD
 ```
 
 Las reglas completas (naming, estructura, SOLID/DRY/KISS/YAGNI, shadcn primero) están en **[`docs/SETUP.md`](docs/SETUP.md)**, que es la fuente de verdad del proyecto.
@@ -47,7 +48,7 @@ Requerimiento → Spec → Desarrollo (+ tests) → Review → Cierre
 | Agente | Rol |
 | ------ | --- |
 | `orchestrator` | Punto de entrada. Clasifica la tarea en **BUILD** (directo, 1–3 archivos) o **SDD**, planifica fases y coordina a los demás. |
-| `spec` | Escribe la spec en `docs/specs/<module>/<feature>.md` (criterios, contratos, plan por fases). |
+| `spec` | Escribe la spec en `specs/<module>/<feature>.md` (criterios, contratos, plan por fases). |
 | `developer` | Implementa una tarea aprobada, tocando solo sus archivos (`Owns`). |
 | `reviewer` | Valida contra la spec y `SETUP.md`. Solo lectura. |
 
