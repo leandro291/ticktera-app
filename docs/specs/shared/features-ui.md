@@ -1,0 +1,186 @@
+# Ticketera — Features UI (búsqueda → compra → cuenta → organizador)
+
+- Module: shared (event, purchase, auth, account, organizer)
+- Status: draft
+- Approved by: -
+- Mode: SDD
+
+## Goal
+Implementar en Next.js las pantallas de features 2–8 del diseño de Claude Design (desktop 1440 + móvil 390), solo UI/UX con datos mock y estado en cliente, incluyendo un **mapa de asientos seleccionable** con zoom/pan para las zonas numeradas.
+
+Fuente visual: artifact de diseño `Ticketera Landing Redesign` (tableros `Search`, `EventDetail`, `Tickets`, `Checkout`, `Confirmation`, `Auth`, `MyTickets`, `OrgDashboard`, `OrgCreate` y sus variantes `*Mobile`). Donde esta spec no diga algo, manda el diseño.
+
+## Scope
+- In:
+  - Design tokens del diseño (Poppins, indigo `#4F46E5` primario, naranja `#F97316` CTA, neutros zinc, radios 12–24px) en `app/globals.css`.
+  - Datos mock tipados (los 10 eventos de la landing, zonas/precios, butacas, pedidos, eventos del organizador) e imágenes del diseño en `public/images/events/`.
+  - Header/footer públicos compartidos, header de pasos de compra.
+  - 2 · Búsqueda y listado (filtros, orden, chips; panel de filtros a pantalla completa en móvil).
+  - 3 · Detalle de evento (guardar, compartir, info, lugar, tarjeta de compra, relacionados; barra de compra fija en móvil).
+  - 4 · Selección de entradas: mapa de zonas + **mapa de butacas** para zonas numeradas + cantidades para zonas de campo + resumen.
+  - 5 · Checkout (temporizador, datos comprador, métodos Tarjeta / Yape / PagoEfectivo, términos, resumen; resumen plegable en móvil).
+  - 6 · Confirmación (entrada con QR decorativo) y Mis entradas (pestañas, lista de pedidos, carrusel de entradas).
+  - 7 · Login / registro (pestañas, mostrar contraseña).
+  - 8 · Panel de organizador y Crear evento (formulario con tipos de entrada dinámicos + vista previa en vivo).
+  - Responsive: un único componente por pantalla, mobile-first, layout desktop desde `lg`.
+- Out:
+  - Landing (`/`): no existe en código todavía; esta spec **no** la implementa (ver Open questions).
+  - Backend, auth real, pagos reales, persistencia (el carrito vive en memoria del cliente).
+  - Editor de mapas de asientos para el organizador (solo se consume un layout mock).
+  - QR real, emails, i18n, dark mode.
+
+## Seat map — decisión de librería
+Evaluadas (npm, 2026-09):
+
+| Opción | Compatibilidad con el proyecto | Veredicto |
+| ------ | ------------------------------ | --------- |
+| `@alisaitteke/seatmap-canvas` | peer `react ^18` | ✗ incompatible con React 19 |
+| `react-konva` 19.3 + `konva` | peer `react ^19.3.0` (tenemos 19.2.8); canvas → sin DOM accesible ni Tailwind | ✗ por ahora; solo vale la pena >5k butacas simultáneas |
+| `react-seat-picker`, `seatchart` | abandonadas (React 15/16, 2022) | ✗ |
+| seatmap.pro y similares | SDK comercial, requiere su backend | ✗ fuera de alcance |
+| **SVG propio + `react-zoom-pan-pinch` 4.x** | peer `react: *`, mantenida (sep 2026), ~10 kB | ✓ **elegida** |
+
+Por qué: cada butaca es un `<button>`/elemento SVG con `aria-label`, foco por teclado y estilos Tailwind (tokens del diseño); el layout sale de datos (JSON) así que el backend futuro solo cambia la fuente; `react-zoom-pan-pinch` da pinch-zoom y arrastre en móvil y rueda/botones en desktop sin reinventarlos. El flujo es en dos niveles (zona → butacas), así nunca se renderizan más de unos cientos de butacas a la vez, dentro de lo que SVG maneja sin problema.
+
+## Reuse
+- Reuse: `components/ui/button.tsx`, `lib/utils.ts` (`cn`), `lucide-react` (iconos del diseño son Lucide), `zustand` (carrito), `next/image`, `next/font/google` (Poppins).
+- Extend: `app/globals.css` — tokens del diseño; `app/layout.tsx` — fuente Poppins, `lang="es"`, metadata.
+- New (shadcn, se agregan en setup): `input`, `label`, `checkbox`, `badge`, `tabs`, `select`, `textarea`, `sheet` (panel de filtros y butacas en móvil), `separator`.
+- New: `react-zoom-pan-pinch` (ver decisión arriba); `vitest` para los tests de lógica del carrito/butacas (primer test del repo).
+- New: módulos `event`, `purchase`, `auth`, `account`, `organizer` (no existe ningún módulo aún).
+
+## Routes (app/ = solo routing)
+| Ruta | Pantalla |
+| ---- | -------- |
+| `/events` | Búsqueda y listado (`?q=&category=`) |
+| `/events/[id]` | Detalle |
+| `/events/[id]/tickets` | Selección de entradas / mapa |
+| `/checkout` | Datos y pago |
+| `/checkout/confirmation` | Confirmación |
+| `/login` | Login / registro (`?mode=register`) |
+| `/my-tickets` | Mis entradas |
+| `/organizer` | Panel |
+| `/organizer/events/new` | Crear evento |
+
+## Acceptance criteria
+- AC1 (tokens): la app usa Poppins, primario `#4F46E5`, CTA naranja `#F97316` con texto `#18181B`, fondo `#F4F4F5` en flujos de compra; `focus-visible` con anillo `#818CF8`.
+- AC2 (búsqueda): `/events` lista los 10 eventos mock; buscar por texto filtra por título/lugar/ciudad; filtros por categoría, ciudad, fecha y precio; chips de filtros activos removibles; orden por fecha o precio; estado vacío con "Limpiar filtros". En móvil los filtros abren un panel a pantalla completa con botón "Ver N eventos".
+- AC3 (detalle): `/events/[id]` muestra hero, acerca, información importante, lugar, tarjeta de entradas por zona (Agotado / Últimas entradas) y relacionados; botón guardar alterna estado; CTA lleva a `/events/[id]/tickets`. En móvil hay barra de compra fija abajo. `id` inexistente → `notFound()`.
+- AC4 (mapa de zonas): la pantalla de entradas dibuja el mapa de zonas del diseño (Escenario, Campo VIP, Campo General, Tribunas Occidente/Oriente/Norte) como SVG accesible; zonas agotadas se ven deshabilitadas; tocar una zona la selecciona (`aria-pressed`) y resalta su fila en la lista.
+- AC5 (butacas): seleccionar una zona numerada (tribunas) muestra su mapa de butacas (filas × asientos) con leyenda Disponible / Seleccionada / Ocupada; zoom con botones, rueda y pinch, y arrastre; cada butaca es enfocable con `aria-label="Fila C, asiento 12, S/ 380"` y se alterna con click/Enter/Espacio; las ocupadas no son seleccionables. En desktop va en la tarjeta del mapa; en móvil en un `Sheet` a pantalla completa.
+- AC6 (límites): máximo 6 entradas por zona (cantidades o butacas); al llegar al límite los `+` y las butacas libres de esa zona se deshabilitan y se anuncia el motivo.
+- AC7 (resumen): el resumen lista cantidad × zona (y las butacas "Fila C · 12, 13" en zonas numeradas), total en `S/` con formato `es-PE` y contador; "Continuar" solo habilitado con ≥1 entrada. En móvil es barra fija abajo.
+- AC8 (checkout): `/checkout` muestra pasos (2 activo), temporizador 10:00 regresivo, datos del comprador, métodos de pago con su formulario (tarjeta / Yape / PagoEfectivo), checkbox de términos que habilita "Pagar", y el resumen del carrito; en móvil el resumen es plegable. Sin carrito → estado vacío con link a eventos. Pagar vacía el carrito y navega a confirmación.
+- AC9 (confirmación): `/checkout/confirmation` muestra "¡Compra confirmada!", entrada con QR decorativo (patrón del diseño), código de pedido y "Qué sigue".
+- AC10 (auth): `/login` alterna "Iniciar sesión" / "Crear cuenta" con pestañas y links cruzados; botón mostrar/ocultar contraseña con `aria-pressed`; enviar navega a `/my-tickets` (sin validación de backend).
+- AC11 (mis entradas): pestañas Próximas (2) / Pasadas (0 con estado vacío); seleccionar pedido muestra su entrada; flechas recorren las entradas del pedido (deshabilitadas en extremos).
+- AC12 (panel organizador): sidebar (drawer en móvil), métricas resumen, lista "Mis eventos" con filtros por estado y acción por fila.
+- AC13 (crear evento): formulario de información básica, fecha y lugar, imagen de portada, tipos de entrada (agregar/quitar, mínimo 1), capacidad total calculada y vista previa en vivo de la tarjeta del evento.
+- AC14 (responsive): cada pantalla respeta el layout móvil a 390px sin scroll horizontal y el desktop a ≥1024px.
+- AC15 (calidad): `npm run lint`, `npx tsc --noEmit` y `npm test` en verde; `npm run build` compila.
+
+## Contracts
+
+```ts
+// modules/event/types/event.ts
+export type EventCategory = "Conciertos" | "Deportes" | "Teatro" | "Festivales" | "Familiar" | "Cine" | "Comedia" | "Arte y Exposiciones";
+export type AvailabilityStatus = "available" | "last-tickets" | "sold-out";
+export interface EventSummary {
+  id: string; title: string; category: EventCategory;
+  image: string; imageAlt: string;
+  date: string;            // ISO yyyy-mm-dd; los textos (día, mes, "sáb 14 nov") se derivan con Intl es-PE
+  venue: string; city: string;
+  currency: "PEN" | "USD" | "EUR"; priceFrom: number;
+  status: AvailabilityStatus;
+}
+export interface EventDetail extends EventSummary {
+  time: string; description: string; importantInfo: string[]; address: string;
+  venueLayoutId: string;
+}
+
+// modules/event/services/event-service.ts (mock, async para simular futuro fetch)
+export function getEvents(filters?: EventFilters): Promise<EventSummary[]>;
+export function getEventById(id: string): Promise<EventDetail | null>;
+
+// modules/purchase/types/venue.ts
+export interface Zone {
+  id: string; name: string; price: number; color: string; status: AvailabilityStatus;
+  kind: "general-admission" | "numbered";
+  shape: { x: number; y: number; width: number; height: number };   // viewBox del mapa de zonas
+}
+export interface Seat { id: string; row: string; number: number; x: number; y: number; taken: boolean }
+export interface SeatSection { zoneId: string; seats: Seat[]; width: number; height: number }
+export interface VenueLayout { id: string; zones: Zone[]; sections: SeatSection[] }
+
+// modules/purchase/store/use-cart-store.ts (zustand)
+export interface CartLine { zoneId: string; quantity: number; seatIds: string[] }  // quantity === seatIds.length en numeradas
+interface CartState {
+  eventId: string | null; lines: Record<string, CartLine>;
+  setQuantity(eventId: string, zoneId: string, qty: number): void;
+  toggleSeat(eventId: string, zoneId: string, seatId: string): void;
+  clear(): void;
+}
+export const MAX_TICKETS_PER_ZONE = 6;
+
+// modules/purchase/lib/cart-summary.ts (pura, testeada)
+export function getCartSummary(lines: CartLine[], zones: Zone[]): { items: { zone: Zone; quantity: number; seats: Seat[]; amount: number }[]; total: number; count: number };
+```
+
+`index.ts` de cada módulo exporta solo lo que usan `app/` u otros módulos (componentes de página, tipos, service).
+
+## Edge cases
+- Cambiar de evento con un carrito de otro evento → el carrito se reinicia.
+- Zona agotada: no seleccionable en mapa ni lista (`disabled`, texto "Agotado").
+- Butaca ya seleccionada al llegar al límite: sigue pudiendo deseleccionarse.
+- Temporizador llega a 00:00 → mensaje "Se acabó el tiempo" y botón para volver a elegir entradas.
+- `/checkout` o `/checkout/confirmation` sin datos → estado vacío, nunca crash.
+- Moneda distinta de PEN en eventos internacionales (US$, €) → el formateo usa la moneda del evento.
+- `prefers-reduced-motion`: sin animación de zoom.
+
+## Tests
+- `modules/purchase/lib/cart-summary.test.ts` — AC7: totales, conteo, orden de butacas, carrito vacío.
+- `modules/purchase/store/use-cart-store.test.ts` — AC6: tope por zona en cantidades y butacas, deseleccionar en el tope, butaca ocupada ignorada, reinicio al cambiar de evento.
+- `modules/event/services/event-service.test.ts` — AC2: filtro por texto/categoría/ciudad/precio y orden.
+- `modules/event/lib/format.test.ts` — AC1/AC7: formato de moneda y fechas es-PE.
+
+## Plan
+
+### Phase 1 — Fundaciones + búsqueda
+| ID | Task | Owns | Depends on | Group | Criteria | Status |
+| -- | ---- | ---- | ---------- | ----- | -------- | ------ |
+| T1 | setup: deps (`react-zoom-pan-pinch`, `vitest`), shadcn adds, tokens, Poppins, script `test`, imágenes | package.json, package-lock.json, vitest.config.ts, app/globals.css, app/layout.tsx, components/ui/*, public/images/events/* | - | A | AC1 | todo |
+| T2 | datos y formato de eventos | modules/event/types/event.ts, modules/event/data/events.ts, modules/event/lib/format.ts (+test), modules/event/services/event-service.ts (+test) | T1 | B | AC2 | todo |
+| T3 | header/footer públicos y header de pasos | components/shared/site-header.tsx, components/shared/site-footer.tsx, components/shared/checkout-steps.tsx, components/shared/logo.tsx | T1 | B | AC1, AC14 | todo |
+| T4 | búsqueda y listado | modules/event/components/event-card.tsx, modules/event/components/event-search.tsx, modules/event/components/event-filters.tsx, modules/event/index.ts, app/events/page.tsx | T2, T3 | C | AC2, AC14 | todo |
+
+### Phase 2 — Detalle + selección de entradas con mapa
+| ID | Task | Owns | Depends on | Group | Criteria | Status |
+| -- | ---- | ---- | ---------- | ----- | -------- | ------ |
+| T5 | detalle de evento | modules/event/components/event-detail*.tsx, app/events/[id]/page.tsx | Phase 1 | A | AC3 | todo |
+| T6 | venue mock + carrito (store + summary + tests) | modules/purchase/types/venue.ts, modules/purchase/data/venues.ts, modules/purchase/store/use-cart-store.ts (+test), modules/purchase/lib/cart-summary.ts (+test) | Phase 1 | A | AC6, AC7 | todo |
+| T7 | mapa de zonas + mapa de butacas | modules/purchase/components/zone-map.tsx, modules/purchase/components/seat-map.tsx, modules/purchase/components/seat-map-legend.tsx | T6 | B | AC4, AC5, AC6 | todo |
+| T8 | pantalla de entradas + resumen | modules/purchase/components/ticket-selection.tsx, modules/purchase/components/ticket-tier-list.tsx, modules/purchase/components/order-summary.tsx, modules/purchase/index.ts, app/events/[id]/tickets/page.tsx | T7 | C | AC4–AC7, AC14 | todo |
+
+### Phase 3 — Checkout + confirmación
+| ID | Task | Owns | Depends on | Group | Criteria | Status |
+| -- | ---- | ---- | ---------- | ----- | -------- | ------ |
+| T9 | checkout (temporizador, comprador, pago) | modules/purchase/components/checkout-*.tsx, modules/purchase/hooks/use-countdown.ts, app/checkout/page.tsx | Phase 2 | A | AC8 | todo |
+| T10 | confirmación + QR decorativo | modules/purchase/components/purchase-confirmation.tsx, components/shared/decorative-qr.tsx, app/checkout/confirmation/page.tsx | Phase 2 | A | AC9 | todo |
+
+### Phase 4 — Cuenta
+| ID | Task | Owns | Depends on | Group | Criteria | Status |
+| -- | ---- | ---- | ---------- | ----- | -------- | ------ |
+| T11 | login / registro | modules/auth/components/*, modules/auth/index.ts, app/login/page.tsx | Phase 3 | A | AC10 | todo |
+| T12 | mis entradas | modules/account/**, app/my-tickets/page.tsx | Phase 3 | A | AC11 | todo |
+
+### Phase 5 — Organizador
+| ID | Task | Owns | Depends on | Group | Criteria | Status |
+| -- | ---- | ---- | ---------- | ----- | -------- | ------ |
+| T13 | layout del panel (sidebar/drawer) | modules/organizer/components/organizer-shell.tsx, app/organizer/layout.tsx | Phase 4 | A | AC12 | todo |
+| T14 | panel resumen + mis eventos | modules/organizer/components/organizer-dashboard.tsx, modules/organizer/data/*, app/organizer/page.tsx | T13 | B | AC12 | todo |
+| T15 | crear evento + vista previa | modules/organizer/components/event-form*.tsx, app/organizer/events/new/page.tsx | T13 | B | AC13 | todo |
+
+## Open questions
+- Landing (`/`): el repo está vacío (solo el template). ¿La implementamos también (fase 0) o `/` redirige temporalmente a `/events`?
+- Idioma de rutas: SETUP pide nombres en inglés → se usan rutas en inglés (`/events`, `/my-tickets`). ¿OK o preferís rutas en español para SEO (`/eventos`)?
+- Test runner: se propone **Vitest** (primer test del repo) para la lógica del carrito y los filtros.
