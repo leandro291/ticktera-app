@@ -78,7 +78,7 @@ export function EventSearch({ events, initialQuery = "", initialFilters }: Event
                   </span>
                 )}
               </SheetTrigger>
-              <SheetContent side="bottom" showCloseButton={false} className="h-dvh gap-0 bg-background p-0">
+              <SheetContent side="bottom" showCloseButton={false} className="gap-0 bg-background p-0 data-[side=bottom]:h-dvh">
                 <SheetHeader className="h-16 shrink-0 flex-row items-center justify-between border-b border-divider pr-2 pl-4">
                   <SheetTitle className="text-lg font-semibold">Filtros</SheetTitle>
                   <SheetClose aria-label="Cerrar filtros" className="flex size-11 items-center justify-center rounded-xl hover:bg-muted">

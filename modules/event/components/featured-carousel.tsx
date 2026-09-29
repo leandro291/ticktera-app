@@ -1,30 +1,19 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, MapPinIcon, PauseIcon, PlayIcon } from "lucide-react";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import { formatDateLong, formatDateShort, formatPrice } from "../lib/format";
 import type { EventSummary } from "../types/event";
 
 const SLIDE_MS = 6000;
-const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
-
-const subscribeReducedMotion = (onChange: () => void) => {
-  const query = window.matchMedia(REDUCED_MOTION);
-  query.addEventListener("change", onChange);
-  return () => query.removeEventListener("change", onChange);
-};
-
-function usePrefersReducedMotion() {
-  return useSyncExternalStore(subscribeReducedMotion, () => window.matchMedia(REDUCED_MOTION).matches, () => false);
-}
-
 const pad = (n: number) => String(n).padStart(2, "0");
 
 export function FeaturedCarousel({ events }: { events: EventSummary[] }) {
-  const reducedMotion = usePrefersReducedMotion();
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [index, setIndex] = useState(0);
   const [userPlaying, setUserPlaying] = useState<boolean | null>(null);
   const playing = userPlaying ?? !reducedMotion;

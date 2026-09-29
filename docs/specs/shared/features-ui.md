@@ -171,16 +171,24 @@ Notas: los CTA "Comprar entradas" / "Ver detalles" enlazan a `/events/[id]` y `/
 ### Phase 2 — Detalle + selección de entradas con mapa
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T5 | detalle de evento | modules/event/components/event-detail*.tsx, app/events/[id]/page.tsx | Phase 1 | A | AC3 | todo |
-| T6 | venue mock + carrito (store + summary + tests) | modules/purchase/types/venue.ts, modules/purchase/data/venues.ts, modules/purchase/store/use-cart-store.ts (+test), modules/purchase/lib/cart-summary.ts (+test) | Phase 1 | A | AC6, AC7 | todo |
-| T7 | mapa de zonas + mapa de butacas | modules/purchase/components/zone-map.tsx, modules/purchase/components/seat-map.tsx, modules/purchase/components/seat-map-legend.tsx | T6 | B | AC4, AC5, AC6 | todo |
-| T8 | pantalla de entradas + resumen | modules/purchase/components/ticket-selection.tsx, modules/purchase/components/ticket-tier-list.tsx, modules/purchase/components/order-summary.tsx, modules/purchase/index.ts, app/events/[id]/tickets/page.tsx | T7 | C | AC4–AC7, AC14 | todo |
+| T5 | detalle de evento | modules/event/types/event.ts (EventDetail), modules/event/data/event-details.ts, modules/event/services/event-service.ts (+test: getEventById, getRelatedEvents), modules/event/components/event-detail-view.tsx, event-actions.tsx, related-event-card.tsx, modules/event/index.ts, app/events/[id]/page.tsx | Phase 1 | A | AC3 | done |
+| T6 | venue mock + carrito (store + summary + tests) | modules/purchase/types/venue.ts, modules/purchase/data/venues.ts, modules/purchase/lib/seat-layout.ts, modules/purchase/lib/zone-style.ts, modules/purchase/services/venue-service.ts (+test), modules/purchase/store/use-cart-store.ts (+test), modules/purchase/lib/cart-summary.ts (+test), modules/purchase/hooks/use-event-cart.ts | Phase 1 | A | AC6, AC7 | done |
+| T7 | mapa de zonas + mapa de butacas | modules/purchase/components/zone-map.tsx, modules/purchase/components/seat-map.tsx (leyenda incluida), hooks/use-media-query.ts | T6 | B | AC4, AC5, AC6 | done |
+| T8 | pantalla de entradas + resumen + header de pasos | modules/purchase/components/ticket-selection.tsx, ticket-tier-list.tsx, order-summary.tsx, purchase-header.tsx, zone-price-list.tsx, modules/purchase/index.ts, app/events/[id]/tickets/page.tsx | T7 | C | AC4–AC7, AC14 | done |
+
+Notas de implementación (Phase 2):
+- `EventDetail` quedó con `startTime`, `doorsTime`, `minAge`, `description`, `address`, `venueLayoutId` (en vez de `time` + `importantInfo[]`): el diseño muestra esas 4 tarjetas fijas.
+- Layouts `stadium` y `theater` (JSON en `modules/purchase/data/venues.ts`). Los precios por zona salen de `priceFrom × priceFactor` (reproducen exactamente los del diseño para Bad Bunny) y la disponibilidad de `ZONE_STATUS_OVERRIDES` + estado del evento. Butacas generadas con PRNG determinista (mismo resultado en server y cliente).
+- Mapa de zonas: botones HTML posicionados en % desde el layout (no SVG) para que el texto sea legible en 390px y 1440px con el mismo dato; el mapa de butacas sí es SVG + `react-zoom-pan-pinch`.
+- Butacas: `role="checkbox"`, tabindex itinerante con flechas, Enter/Espacio para alternar; arrastrar no selecciona. Desktop: encuadre completo; móvil: `Sheet` a pantalla completa con escala táctil (~24px por butaca).
+- El header de pasos vive en `modules/purchase/components/purchase-header.tsx` (solo lo usa el flujo de compra), no en `components/shared` (T9b queda cubierta).
+- Evento agotado: `/events/[id]/tickets` redirige al detalle.
+- "Continuar" enlaza a `/checkout` (Phase 3).
 
 ### Phase 3 — Checkout + confirmación
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
 | T9 | checkout (temporizador, comprador, pago) | modules/purchase/components/checkout-*.tsx, modules/purchase/hooks/use-countdown.ts, app/checkout/page.tsx | Phase 2 | A | AC8 | todo |
-| T9b | header de pasos de compra | components/shared/checkout-steps.tsx | Phase 2 | A | AC8, AC9 | todo |
 | T10 | confirmación + QR decorativo | modules/purchase/components/purchase-confirmation.tsx, components/shared/decorative-qr.tsx, app/checkout/confirmation/page.tsx | Phase 2 | A | AC9 | todo |
 
 ### Phase 4 — Cuenta

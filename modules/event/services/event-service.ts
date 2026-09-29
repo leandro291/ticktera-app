@@ -1,5 +1,6 @@
+import { EVENT_DETAILS } from "../data/event-details";
 import { EVENTS, FEATURED_EVENT_IDS, PRICE_RANGES } from "../data/events";
-import type { EventFilters, EventSummary } from "../types/event";
+import type { EventDetail, EventFilters, EventSummary } from "../types/event";
 
 const normalize = (value: string) =>
   value.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -31,4 +32,17 @@ export async function getFeaturedEvents(): Promise<EventSummary[]> {
   return FEATURED_EVENT_IDS.map((id) => EVENTS.find((e) => e.id === id)).filter(
     (e): e is EventSummary => Boolean(e),
   );
+}
+
+export async function getEventById(id: string): Promise<EventDetail | null> {
+  const event = EVENTS.find((e) => e.id === id);
+  const details = EVENT_DETAILS[id];
+  return event && details ? { ...event, ...details } : null;
+}
+
+/** Same category first, then the closest dates; never the event itself. */
+export async function getRelatedEvents(event: EventSummary, limit = 4): Promise<EventSummary[]> {
+  return EVENTS.filter((e) => e.id !== event.id)
+    .sort((a, b) => Number(b.category === event.category) - Number(a.category === event.category) || a.date.localeCompare(b.date))
+    .slice(0, limit);
 }

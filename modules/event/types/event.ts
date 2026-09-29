@@ -30,6 +30,17 @@ export interface EventSummary {
   status: AvailabilityStatus;
 }
 
+export type VenueLayoutId = "stadium" | "theater";
+
+export interface EventDetail extends EventSummary {
+  startTime: string;
+  doorsTime: string;
+  minAge: string;
+  description: string;
+  address: string;
+  venueLayoutId: VenueLayoutId;
+}
+
 export type EventSort = "date" | "price";
 
 export type PriceRangeKey = "any" | "u50" | "50" | "150" | "300";

@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
 import { MobileMenu } from "./mobile-menu";
 import { NavLink } from "./nav-link";
 import { SITE_NAV } from "./site-nav";
 
-export function SiteHeader() {
+export function SiteHeader({ className }: { className?: string }) {
   return (
-    <header className="sticky top-0 z-40 border-b border-divider bg-background">
+    <header className={cn("sticky top-0 z-40 border-b border-divider bg-background", className)}>
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between pr-3 pl-4 lg:h-[76px] lg:px-20">
         <Logo />
         <nav aria-label="Principal" className="hidden items-center gap-9 lg:flex">

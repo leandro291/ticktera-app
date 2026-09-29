@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { filterEvents, getEvents, getFeaturedEvents } from "./event-service";
+import { filterEvents, getEventById, getEvents, getFeaturedEvents, getRelatedEvents } from "./event-service";
 import { EVENTS } from "../data/events";
 
 const titles = (list: { title: string }[]) => list.map((e) => e.title);
@@ -37,5 +37,24 @@ describe("event-service", () => {
 
   it("AC0: featured events keep the design order", async () => {
     expect((await getFeaturedEvents()).map((e) => e.id)).toEqual(["evt-001", "evt-002", "evt-004", "evt-005", "evt-007"]);
+  });
+
+  it("AC3: returns the full detail of an event, or null for an unknown id", async () => {
+    const event = await getEventById("evt-001");
+    expect(event?.title).toBe("Bad Bunny — World Tour");
+    expect(event?.venueLayoutId).toBe("stadium");
+    expect(await getEventById("nope")).toBeNull();
+  });
+
+  it("AC3: related events prefer the same category and exclude the event", async () => {
+    const event = (await getEventById("evt-001"))!;
+    const related = await getRelatedEvents(event);
+    expect(related).toHaveLength(4);
+    expect(related.map((e) => e.id)).not.toContain("evt-001");
+    expect(related.slice(0, 2).every((e) => e.category === "Conciertos")).toBe(true);
+  });
+
+  it("AC3: every catalog event has detail data", async () => {
+    for (const e of await getEvents()) expect(await getEventById(e.id)).not.toBeNull();
   });
 });
