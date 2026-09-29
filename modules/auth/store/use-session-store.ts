@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { persistOptions } from "@/lib/persist";
 
 export interface SessionUser {
   name: string;
@@ -11,9 +13,14 @@ interface SessionState {
   signOut: () => void;
 }
 
-// Mock session kept in memory: there is no backend yet.
-export const useSessionStore = create<SessionState>()((set) => ({
-  user: null,
-  signIn: (user) => set({ user }),
-  signOut: () => set({ user: null }),
-}));
+// Mock session saved in localStorage: there is no backend yet.
+export const useSessionStore = create<SessionState>()(
+  persist(
+    (set) => ({
+      user: null,
+      signIn: (user) => set({ user }),
+      signOut: () => set({ user: null }),
+    }),
+    persistOptions<SessionState>("session"),
+  ),
+);

@@ -5,8 +5,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDownIcon, LoaderCircleIcon, LockIcon, ShoppingCartIcon, TimerIcon, TimerOffIcon } from "lucide-react";
+import { PageLoading } from "@/components/shared/page-loading";
 import { Checkbox } from "@/components/ui/checkbox";
 import { formatDateShort, formatPrice, type EventDetail, type EventSummary } from "@/modules/event";
+import { useStoreHydrated } from "@/hooks/use-store-hydrated";
 import { cn } from "@/lib/utils";
 import { useCountdown } from "../hooks/use-countdown";
 import { useEventCart } from "../hooks/use-event-cart";
@@ -28,7 +30,9 @@ interface CheckoutViewProps {
 }
 
 export function CheckoutView({ event, venue }: CheckoutViewProps) {
+  const hydrated = useStoreHydrated(useCartStore);
   if (!event || !venue) return <CheckoutEmpty />;
+  if (!hydrated) return <PageLoading />;
   return <CheckoutContent event={event} venue={venue} />;
 }
 

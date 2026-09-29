@@ -4,11 +4,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, CalendarPlusIcon, CheckIcon, DownloadIcon, LoaderCircleIcon, MailIcon, QrCodeIcon, TicketIcon } from "lucide-react";
 import { DecorativeQr } from "@/components/shared/decorative-qr";
+import { PageLoading } from "@/components/shared/page-loading";
+import { useStoreHydrated } from "@/hooks/use-store-hydrated";
 import { formatDateLong, formatPrice } from "@/modules/event";
 import { useOrderPdf } from "../hooks/use-order-pdf";
 import { downloadOrderIcs } from "../lib/calendar";
 import { formatOrderSeats } from "../lib/order";
-import { useLastOrder } from "../store/use-order-store";
+import { useLastOrder, useOrderStore } from "../store/use-order-store";
 
 const NEXT_STEPS = [
   { icon: MailIcon, title: "Revisa tu correo", text: "Ahí llegan tus entradas y el comprobante de pago." },
@@ -23,6 +25,9 @@ const secondaryButton =
 export function PurchaseConfirmation() {
   const order = useLastOrder();
   const pdf = useOrderPdf(order);
+  const hydrated = useStoreHydrated(useOrderStore);
+
+  if (!hydrated) return <PageLoading />;
 
   if (!order) {
     return (

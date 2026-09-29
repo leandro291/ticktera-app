@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ImageUpIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { imageFileToDataUrl } from "../lib/image-data-url";
 import { section } from "./event-form-styles";
 
 const ACCEPTED = ["image/jpeg", "image/png"];
@@ -13,21 +14,25 @@ interface EventFormCoverProps {
 }
 
 /**
- * Cover upload (click or drag & drop). The file never leaves the browser: it is shown through an object URL
- * that lives as long as the session (no backend yet).
+ * Cover upload (click or drag & drop). The file never leaves the browser: it is compressed to a data URL
+ * and saved with the event in localStorage (no backend yet).
  */
 export function EventFormCover({ image, onChange }: EventFormCoverProps) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const pick = (file: File | undefined) => {
+  const pick = async (file: File | undefined) => {
     if (!file) return;
     if (!ACCEPTED.includes(file.type)) {
       setError("Usa una imagen JPG o PNG.");
       return;
     }
     setError(null);
-    onChange(URL.createObjectURL(file));
+    try {
+      onChange(await imageFileToDataUrl(file));
+    } catch {
+      setError("No pudimos leer esa imagen. Prueba con otra.");
+    }
   };
 
   return (
@@ -52,7 +57,7 @@ export function EventFormCover({ image, onChange }: EventFormCoverProps) {
         )}
       >
         {image && (
-          // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
+          // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
           <img src={image} alt="" className="absolute inset-0 size-full object-cover" />
         )}
         <span className={cn("relative flex flex-col items-center gap-1.5 lg:gap-2", image && "rounded-2xl bg-background/90 px-4 py-3")}>

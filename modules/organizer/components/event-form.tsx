@@ -4,9 +4,11 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
+import { PageLoading } from "@/components/shared/page-loading";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useStoreHydrated } from "@/hooks/use-store-hydrated";
 import { cn } from "@/lib/utils";
 import { EVENT_CATEGORIES, type EventCategory } from "@/modules/event";
 import { buildOrganizerEvent, createEventDraft, createTierDraft, draftFromEvent } from "../lib/event-draft";
@@ -23,6 +25,13 @@ const button = "flex h-[52px] items-center justify-center rounded-[14px] px-3 te
 
 /** Create an event, or keep editing a draft when `draftId` matches one of the organizer's events. */
 export function EventForm({ draftId }: { draftId?: string }) {
+  const hydrated = useStoreHydrated(useOrganizerStore);
+  // A draft is looked up once, so wait for the saved events before building the form state.
+  if (draftId && !hydrated) return <PageLoading />;
+  return <EventFormContent draftId={draftId} />;
+}
+
+function EventFormContent({ draftId }: { draftId?: string }) {
   const router = useRouter();
   const saveEvent = useOrganizerStore((s) => s.saveEvent);
   const editing = useOrganizerStore((s) => (draftId ? s.events.find((e) => e.id === draftId) : undefined));

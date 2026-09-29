@@ -67,7 +67,7 @@ function EventRow({ event }: { event: OrganizerEvent }) {
       <div className="flex min-w-0 items-center gap-3 lg:gap-3.5">
         <span className="relative flex size-[52px] shrink-0 items-center justify-center overflow-hidden rounded-xl bg-accent text-primary">
           {event.image ? (
-            <Image src={event.image} alt="" fill sizes="52px" className="object-cover" unoptimized={event.image.startsWith("blob:")} />
+            <Image src={event.image} alt="" fill sizes="52px" className="object-cover" unoptimized={event.image.startsWith("data:")} />
           ) : (
             <ImageIcon className="size-5" aria-hidden />
           )}

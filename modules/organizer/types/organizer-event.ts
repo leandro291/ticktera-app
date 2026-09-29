@@ -16,7 +16,7 @@ export interface OrganizerEvent {
   title: string;
   category: EventCategory;
   description: string;
-  /** Catalog image path or an object URL from the cover upload. */
+  /** Catalog image path or a data URL from the cover upload. */
   image?: string;
   /** ISO date (yyyy-mm-dd); empty on drafts without a date. */
   date: string;

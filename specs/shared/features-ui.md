@@ -26,7 +26,7 @@ Fuente visual: artifact de diseño `Ticketera Landing Redesign` (tableros `Main`
   - Responsive: un único componente por pantalla, mobile-first, layout desktop desde `lg`.
 - Out:
   - Variante Hero B del diseño (se usa Hero A).
-  - Backend, auth real, pagos reales, persistencia (el carrito vive en memoria del cliente).
+  - Backend, auth real, pagos reales. (Persistencia local en `localStorage` agregada después; ver Decisions.)
   - Editor de mapas de asientos para el organizador (solo se consume un layout mock).
   - QR real, emails, i18n, dark mode.
 
@@ -195,7 +195,7 @@ Notas de implementación (Phase 3):
 - `/checkout?event=<id>`: el server carga evento + venue; el cliente toma las líneas del carrito de ese evento. Sin `event`, evento inexistente o carrito vacío → estado vacío con link a `/events`.
 - Pagar: validación nativa (`required` / `pattern`), formato de tarjeta `0000 0000 …` y `MM/AA`, 900 ms de "Procesando pago…", luego se guarda un `Order` inmutable en `useOrderStore.lastOrder`, se vacía el carrito y se navega a la confirmación.
 - Temporizador de 10:00; al llegar a 0 se bloquea el formulario y se ofrece volver a elegir entradas.
-- Confirmación: lee `lastOrder` (recargar la página muestra un estado vacío: no hay persistencia). "Agregar al calendario" descarga un `.ics`; "Descargar PDF" usa la impresión del navegador; "Ver mis entradas" → `/my-tickets` (Phase 4).
+- Confirmación: lee `lastOrder` (se conserva al recargar, ver Decisions). "Agregar al calendario" descarga un `.ics` (con hora de inicio, 3 h); "Descargar PDF" genera un PDF real con jsPDF (una página por entrada); "Ver mis entradas" → `/my-tickets` (Phase 4).
 - Contratos nuevos: `Order`, `OrderItem`, `PaymentMethod` (`modules/purchase/types/order.ts`).
 
 ### Phase 4 — Cuenta
@@ -205,7 +205,7 @@ Notas de implementación (Phase 3):
 | T12 | mis entradas | modules/account/components/my-tickets.tsx, modules/account/data/sample-orders.ts, modules/account/lib/split-orders.ts (+test), modules/account/index.ts, modules/purchase/types/order.ts, modules/purchase/lib/order.ts (+test), modules/purchase/store/use-order-store.ts, modules/purchase/index.ts, app/my-tickets/page.tsx | Phase 3 | A | AC11 | done |
 
 Notas de implementación (Phase 4):
-- Sesión simulada en memoria (`useSessionStore`): login usa el email (nombre derivado del email), registro pide nombre, email, contraseña (mín. 8) y términos. Tras enviar navega a `?redirect=` (solo rutas del mismo sitio) o a `/my-tickets`. Recargar cierra la sesión (sin persistencia).
+- Sesión simulada (`useSessionStore`, guardada en `localStorage`): login usa el email (nombre derivado del email), registro pide nombre, email, contraseña (mín. 8) y términos. Tras enviar navega a `?redirect=` (solo rutas del mismo sitio) o a `/my-tickets`.
 - Header: sin sesión muestra "Iniciar sesión" / "Ingresar" (con `redirect` a la página actual); con sesión, "Mis entradas" + avatar con iniciales que abre un panel con nombre, email y "Cerrar sesión". `components/shared/site-header.tsx` consume `AccountMenu` desde `@/modules/auth` (API pública).
 - `/my-tickets` no exige sesión (UI mock): une los 2 pedidos de ejemplo del diseño con los pagados en la sesión (`useOrderStore.orders`), separa Próximas/Pasadas por fecha y muestra cada entrada con su QR decorativo, zona/butaca, titular y código `TK-NNNNN-0N`.
 - Cambio de contrato: `Order` suma `buyerName`, `event.startTime` y `items[].seats` (una butaca por entrada); `useOrderStore` guarda la lista `orders` (`useLastOrder`, `usePlacedOrders`).
@@ -219,7 +219,7 @@ Notas de implementación (Phase 4):
 
 Notas de implementación (Phase 5):
 - Layout propio en `/organizer` (sin header/footer del sitio): sidebar fijo desde `lg` y barra superior con drawer en móvil. "Ventas" y "Configuración" se muestran deshabilitadas con la etiqueta "Pronto" (no existen aún). La cuenta abajo usa la sesión de `@/modules/auth` ("Organizador demo" sin sesión).
-- Datos: los 4 eventos de ejemplo del diseño con tipos de entrada (`OrganizerEvent.tiers`); vendidas, capacidad e ingresos se derivan de los tipos (`lib/event-stats`). `useOrganizerStore` los guarda en memoria: recargar restaura los datos de ejemplo.
+- Datos: los 4 eventos de ejemplo del diseño con tipos de entrada (`OrganizerEvent.tiers`); vendidas, capacidad e ingresos se derivan de los tipos (`lib/event-stats`). `useOrganizerStore` los guarda en `localStorage` (la primera vez arranca con los datos de ejemplo); la portada se guarda comprimida como data URL.
 - Acción por fila: publicado → "Ver ventas" abre un panel con el detalle por tipo de entrada (y link a la página pública si el evento está en el catálogo); borrador → "Editar" abre el formulario en `/organizer/events/new?draft=<id>` con los datos cargados.
 - Crear evento: "Publicar" valida con `required` nativo (nombre, fecha, hora, lugar, ciudad y cada tipo de entrada); "Guardar borrador" solo exige el nombre. Ambos guardan en el store y vuelven a `/organizer?saved=published|draft` con un aviso. Mínimo 1 tipo de entrada (el botón de quitar se deshabilita).
 - La portada se previsualiza con un object URL local (clic o arrastrar; solo JPG/PNG); no se sube a ningún lado.
@@ -230,6 +230,7 @@ Notas de implementación (Phase 5):
 - Landing incluida (Phase 1b), reemplaza la página del template.
 - Rutas en inglés (SETUP §1).
 - Test runner: Vitest.
+- Persistencia local (2026-09-29): sesión, carrito, pedidos y eventos del organizador se guardan en `localStorage` (`zustand/persist`, claves `ticketera:*`, `lib/persist.ts`). Se rehidratan después del montaje (`PersistedStores` en el layout raíz) para no romper la hidratación; checkout, confirmación y edición de borrador esperan esa carga. Si el storage no está disponible o se llena, la app sigue en memoria. Las pestañas abiertas se sincronizan con el evento `storage`.
 - Fuente de verdad visual: Claude Design (2026-09-29). `docs/design-system.md` se reescribió con estos tokens (índigo, CTA naranja) y `specs/events/landing-page.md` queda superseded.
 
 ## Open questions

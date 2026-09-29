@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { LogOutIcon, TicketIcon } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useStoreHydrated } from "@/hooks/use-store-hydrated";
 import { cn } from "@/lib/utils";
 import { initials } from "../lib/display-name";
 import { useSessionStore } from "../store/use-session-store";
@@ -14,12 +15,16 @@ export function AccountMenu() {
   const signOut = useSessionStore((s) => s.signOut);
   const pathname = usePathname();
   const router = useRouter();
+  const hydrated = useStoreHydrated(useSessionStore);
 
   if (!user) {
     return (
       <Link
         href={`/login?redirect=${encodeURIComponent(pathname)}`}
-        className="flex h-11 items-center rounded-xl px-3 text-sm font-medium text-foreground hover:bg-muted lg:px-[18px] lg:text-[15px]"
+        // Hidden (space kept) until the saved session loads, so a signed-in user doesn't see "Iniciar sesión" flash.
+        aria-hidden={!hydrated || undefined}
+        tabIndex={hydrated ? undefined : -1}
+        className={cn(!hydrated && "invisible", "flex h-11 items-center rounded-xl px-3 text-sm font-medium text-foreground hover:bg-muted lg:px-[18px] lg:text-[15px]")}
       >
         <span className="lg:hidden">Ingresar</span>
         <span className="hidden lg:inline">Iniciar sesión</span>

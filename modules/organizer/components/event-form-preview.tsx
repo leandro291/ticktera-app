@@ -29,7 +29,7 @@ export function EventFormPreview({ draft, className }: { draft: EventDraft; clas
       <div className="relative flex h-[132px] overflow-hidden rounded-[20px] border border-border bg-card lg:h-auto lg:flex-col lg:rounded-[22px]">
         <span className="relative flex w-[108px] shrink-0 items-center justify-center bg-indigo-100 text-indigo-700 lg:h-[180px] lg:w-full">
           {draft.image ? (
-            // eslint-disable-next-line @next/next/no-img-element -- local object URL preview
+            // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
             <img src={draft.image} alt="" className="absolute inset-0 size-full object-cover" />
           ) : (
             <ImageIcon className="size-7 lg:size-9" aria-hidden />
