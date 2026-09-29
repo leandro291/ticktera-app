@@ -24,7 +24,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Agent | File | Role |
 | ----- | ---- | ---- |
 | `orchestrator` | `.claude/agents/orchestrator.md` | Entry point. Classifies each task as BUILD (direct, 1–3 files, no new contracts) or SDD, plans achievable phases, dispatches the others (in parallel when task `Owns` don't overlap), runs the review loop (max 3 rounds). |
-| `spec` | `.claude/agents/spec.md` | Writes `docs/specs/<module>/<feature>.md`: ACs, contracts, reuse analysis, phased plan with per-task file ownership. Always `draft`. |
+| `spec` | `.claude/agents/spec.md` | Writes `specs/<module>/<feature>.md`: ACs, contracts, reuse analysis, phased plan with per-task file ownership. Always `draft`. |
 | `developer` | `.claude/agents/developer.md` | Implements one approved task, touching only its `Owns`. |
 | `reviewer` | `.claude/agents/reviewer.md` | Read-only. Validates against spec + SETUP; returns `APPROVED` / `CHANGES_REQUESTED` / `SPEC_ISSUE`. |
 
