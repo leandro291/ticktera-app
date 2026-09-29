@@ -1,11 +1,14 @@
 import type { AvailabilityStatus, Currency, VenueLayoutId } from "@/modules/event";
 
-/** Position on the zone map, in percent of the map's width/height. */
-export interface MapRect {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+/**
+ * A zone on the venue map: a ring sector around the half-moon stage. Radii are in map units (the map is 1000 wide),
+ * angles in degrees: 0° points straight at the audience, negative angles go to the stage's left.
+ */
+export interface ZoneArc {
+  inner: number;
+  outer: number;
+  from: number;
+  to: number;
 }
 
 export type ZoneKind = "general-admission" | "numbered";
@@ -16,7 +19,7 @@ export interface VenueZone {
   /** Label used on the small (mobile) map. */
   shortName: string;
   kind: ZoneKind;
-  shape: MapRect;
+  arc: ZoneArc;
   color: string;
   textColor: string;
   /** Price multiplier over the event's `priceFrom`. */
@@ -27,7 +30,8 @@ export interface VenueZone {
 
 export interface VenueLayout {
   id: VenueLayoutId;
-  stage: MapRect;
+  /** Radius of the half-moon stage on the zone map. */
+  stageRadius: number;
   zones: VenueZone[];
   /** How much seat rows bend around the stage: 0 = straight (tribunes), 1 = tight arc (theaters). */
   seatCurve?: number;

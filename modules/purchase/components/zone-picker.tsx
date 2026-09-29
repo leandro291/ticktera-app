@@ -21,7 +21,15 @@ interface ZonePickerProps {
 export function ZonePicker({ layout, tiers, currency, quantityOf, highlightedZoneId, onHighlight, onSelect }: ZonePickerProps) {
   return (
     <div className="flex flex-col gap-4 lg:gap-5">
-      <ZoneMap layout={layout} tiers={tiers} currency={currency} highlightedZoneId={highlightedZoneId} onHighlight={onHighlight} onSelect={onSelect} />
+      <ZoneMap
+        layout={layout}
+        tiers={tiers}
+        currency={currency}
+        highlightedZoneId={highlightedZoneId}
+        onHighlight={onHighlight}
+        onSelect={onSelect}
+        quantityOf={quantityOf}
+      />
 
       <ul aria-label="Zonas" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:gap-3" onPointerLeave={() => onHighlight(null)}>
         {tiers.map((tier) => {

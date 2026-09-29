@@ -142,6 +142,12 @@ export function pickBestSeats(section: SeatSection, count: number, alreadySelect
   - Círculos SVG del color de la zona. Las ocupadas se ven grises con ×, y las bloqueadas por el límite, atenuadas.
   - Hover con mouse o foco con teclado muestra un tooltip con zona, fila, asiento y precio.
   - Hay un minimapa cuando el zoom supera 1.15× el encuadre (solo escritorio).
+- **Mapa de zonas (ajuste posterior, 2026-09-29):**
+  - Pedido por el equipo: el escenario es una **media luna** y cada zona es un sector de anillo a su alrededor, como un anfiteatro. Reemplaza los rectángulos.
+  - `VenueZone.arc` (radios y ángulos) reemplaza a `shape`, y `VenueLayout.stageRadius` reemplaza a `stage`. La geometría está en `lib/venue-geometry.ts`, con tests.
+  - Detalles visuales: escenario con degradado, luces al borde y un resplandor suave. Las zonas llevan separación redondeada y la resaltada se eleva con un contorno.
+  - Las etiquetas son HTML sobre el SVG para que se lean en móvil; las zonas con entradas elegidas muestran "✓ N".
+  - El escenario del mapa de butacas también es media luna.
 - **Pasos:**
   - `ZonePicker` combina el mapa y las tarjetas de zona sincronizadas; el mapa muestra las zonas agotadas rayadas.
   - Una zona general abre `GaQuantity` en el mismo panel.

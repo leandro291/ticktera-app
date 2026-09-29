@@ -10,8 +10,9 @@ const AISLE_GAP = 16;
 /** Distance from the outer seat's centre to its row letter. */
 const LABEL_OFFSET = SEAT_R + 14;
 const MARGIN = 16;
-const STAGE_H = 40;
-const STAGE_GAP = 30;
+/** Depth of the half-moon stage and its gap to the first row. */
+const STAGE_H = 64;
+const STAGE_GAP = 26;
 
 const TAKEN_RATIO: Record<AvailabilityStatus, number> = {
   available: 0.35,
@@ -85,7 +86,7 @@ export function buildSeatSection(
   const height = Math.ceil(Math.max(...ys) + SEAT_R + dy + MARGIN);
   const move = (p: Point): Point => ({ x: round(p.x + dx), y: round(p.y + dy) });
 
-  const stageWidth = Math.round(width * 0.6);
+  const stageWidth = Math.round(width * 0.5);
   return {
     zoneId,
     width,

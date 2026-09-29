@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import { MaximizeIcon, MinusIcon, PlusIcon } from "lucide-react";
 import { formatPrice, type Currency } from "@/modules/event";
 import { cn } from "@/lib/utils";
 import { SEAT_R } from "../lib/seat-layout";
+import { halfMoonPath } from "../lib/venue-geometry";
 import type { Seat, SeatSection, ZoneTier } from "../types/venue";
 
 interface SeatMapProps {
@@ -48,17 +49,30 @@ const controlClass = "flex size-10 items-center justify-center rounded-xl text-f
 
 export const seatLabel = (seat: Pick<Seat, "row" | "number">) => `Fila ${seat.row} · Asiento ${seat.number}`;
 
-/** Stage band; a curved section draws its front edge as an arc facing the seats. */
+/** Half-moon stage (same look as the zone map): flat back wall, round front edge with footlights. */
 function Stage({ stage }: { stage: SeatSection["stage"] }) {
-  const { x, y, width, height, curve } = stage;
-  const d =
-    curve > 0
-      ? `M ${x} ${y + 10} Q ${x} ${y} ${x + 10} ${y} L ${x + width - 10} ${y} Q ${x + width} ${y} ${x + width} ${y + 10} L ${x + width} ${y + height * 0.55} Q ${x + width / 2} ${y + height * 1.45} ${x} ${y + height * 0.55} Z`
-      : `M ${x + 12} ${y} H ${x + width - 12} Q ${x + width} ${y} ${x + width} ${y + 12} V ${y + height - 12} Q ${x + width} ${y + height} ${x + width - 12} ${y + height} H ${x + 12} Q ${x} ${y + height} ${x} ${y + height - 12} V ${y + 12} Q ${x} ${y} ${x + 12} ${y} Z`;
+  const gradientId = `tk-seat-stage-${useId()}`;
+  const { x, y, width, height } = stage;
+  const cx = x + width / 2;
+  const rx = width / 2;
+  const lights = Array.from({ length: 9 }, (_, i) => {
+    const t = ((i + 1) / 10) * Math.PI;
+    return { x: cx - Math.cos(t) * (rx - 10), y: y + Math.sin(t) * (height - 8) };
+  });
   return (
     <g aria-hidden>
-      <path d={d} className="fill-stage" />
-      <text x={x + width / 2} y={y + height * (curve > 0 ? 0.42 : 0.5)} dominantBaseline="central" textAnchor="middle" className="fill-white text-[11px] font-bold tracking-[0.2em]">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1e1b4b" />
+          <stop offset="100%" stopColor="#3730a3" />
+        </linearGradient>
+      </defs>
+      <path d={halfMoonPath(cx, y - 1, rx + 5, height + 5)} fill="#c7d2fe" opacity={0.5} />
+      <path d={halfMoonPath(cx, y, rx, height)} fill={`url(#${gradientId})`} />
+      {lights.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r={2.6} fill="#fde68a" opacity={0.9} />
+      ))}
+      <text x={cx} y={y + height * 0.42} dominantBaseline="central" textAnchor="middle" className="fill-white text-[11px] font-bold tracking-[0.2em]">
         ESCENARIO
       </text>
     </g>
@@ -78,7 +92,7 @@ function MiniMap({ section, view }: { section: SeatSection; view: View }) {
   };
   return (
     <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} aria-hidden className="absolute top-3 left-3 z-10 hidden rounded-lg border border-border bg-background/95 shadow-sm lg:block">
-      <rect x={section.stage.x * k} y={section.stage.y * k} width={section.stage.width * k} height={section.stage.height * k} rx={2} className="fill-stage" />
+      <path d={halfMoonPath((section.stage.x + section.stage.width / 2) * k, section.stage.y * k, (section.stage.width / 2) * k, section.stage.height * k)} className="fill-stage" />
       {section.seats.map((s) => (
         <circle key={s.id} cx={s.cx * k} cy={s.cy * k} r={Math.max(0.9, SEAT_R * k)} className={s.taken ? "fill-border" : "fill-indigo-300"} />
       ))}
