@@ -1,8 +1,8 @@
 # Ticketera — UI (landing + búsqueda → compra → cuenta → organizador)
 
 - Module: shared (event, purchase, auth, account, organizer)
-- Status: draft
-- Approved by: -
+- Status: approved
+- Approved by: noe12claude (2026-09-29)
 - Mode: SDD
 
 ## Goal
@@ -151,15 +151,22 @@ export function getCartSummary(lines: CartLine[], zones: Zone[]): { items: { zon
 ### Phase 1 — Fundaciones + búsqueda
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: deps (`react-zoom-pan-pinch`, `vitest`), shadcn adds, tokens, Poppins, script `test`, imágenes | package.json, package-lock.json, vitest.config.ts, app/globals.css, app/layout.tsx, components/ui/*, public/images/events/* | - | A | AC1 | todo |
-| T2 | datos y formato de eventos | modules/event/types/event.ts, modules/event/data/events.ts, modules/event/lib/format.ts (+test), modules/event/services/event-service.ts (+test) | T1 | B | AC2 | todo |
-| T3 | header/footer públicos y header de pasos | components/shared/site-header.tsx, components/shared/site-footer.tsx, components/shared/checkout-steps.tsx, components/shared/logo.tsx | T1 | B | AC1, AC14 | todo |
-| T4 | búsqueda y listado | modules/event/components/event-card.tsx, modules/event/components/event-search.tsx, modules/event/components/event-filters.tsx, modules/event/index.ts, app/events/page.tsx | T2, T3 | C | AC2, AC14 | todo |
+| T1 | setup: deps (`react-zoom-pan-pinch`, `vitest`, `@types/node@22`), shadcn (input, label, checkbox, badge, tabs, select, textarea, sheet, separator, radio-group), tokens, Poppins, script `test`, imágenes | package.json, package-lock.json, vitest.config.mts, app/globals.css, app/layout.tsx, components/ui/*, public/images/events/* | - | A | AC1 | done |
+| T2 | datos y formato de eventos | modules/event/types/event.ts, modules/event/data/events.ts, modules/event/lib/format.ts (+test), modules/event/lib/search-params.ts (+test), modules/event/services/event-service.ts (+test) | T1 | B | AC2 | done |
+| T3 | header/footer públicos | components/shared/logo.tsx, components/shared/site-header.tsx, components/shared/site-footer.tsx, components/shared/mobile-menu.tsx, components/shared/nav-link.tsx, components/shared/site-nav.ts | T1 | B | AC1, AC14 | done |
+| T4 | búsqueda y listado | modules/event/components/event-card.tsx, event-date-badge.tsx, event-status-badge.tsx, event-empty-state.tsx, event-search-bar.tsx, event-filters.tsx, event-search.tsx, modules/event/index.ts, app/events/page.tsx | T2, T3 | C | AC2, AC14 | done |
+
+Notas de implementación (Phase 1):
+- `components/shared/checkout-steps.tsx` se movió a Phase 3 (T9), donde se usa por primera vez (YAGNI).
+- El registro `ui.shadcn.com` está bloqueado por la red del entorno remoto: los componentes `base-nova` se portaron desde el repo oficial `shadcn-ui/ui` (`apps/v4/registry/bases/base/ui` + `styles/style-nova.css`), equivalente a lo que genera `npx shadcn add`.
+- `/events` lee `?q=&category=&city=&month=&price=` (`parseEventSearchParams`); el filtrado posterior es en cliente con `filterEvents`.
 
 ### Phase 1b — Landing
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T4b | landing: hero carrusel, categorías, grilla, secciones | modules/event/components/featured-carousel.tsx, modules/event/components/home-page.tsx, modules/event/components/category-chips.tsx, app/page.tsx | Phase 1 | A | AC0, AC14 | todo |
+| T4b | landing: hero + buscador, carrusel, categorías + próximos eventos, cómo funciona, newsletter | modules/event/components/featured-carousel.tsx, home-catalog.tsx, newsletter-signup.tsx, home-page.tsx, app/page.tsx | Phase 1 | A | AC0, AC14 | done |
+
+Notas: los CTA "Comprar entradas" / "Ver detalles" enlazan a `/events/[id]` y `/events/[id]/tickets`, que se implementan en Phase 2 (hasta entonces dan 404).
 
 ### Phase 2 — Detalle + selección de entradas con mapa
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
@@ -173,6 +180,7 @@ export function getCartSummary(lines: CartLine[], zones: Zone[]): { items: { zon
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
 | T9 | checkout (temporizador, comprador, pago) | modules/purchase/components/checkout-*.tsx, modules/purchase/hooks/use-countdown.ts, app/checkout/page.tsx | Phase 2 | A | AC8 | todo |
+| T9b | header de pasos de compra | components/shared/checkout-steps.tsx | Phase 2 | A | AC8, AC9 | todo |
 | T10 | confirmación + QR decorativo | modules/purchase/components/purchase-confirmation.tsx, components/shared/decorative-qr.tsx, app/checkout/confirmation/page.tsx | Phase 2 | A | AC9 | todo |
 
 ### Phase 4 — Cuenta
@@ -194,4 +202,4 @@ export function getCartSummary(lines: CartLine[], zones: Zone[]): { items: { zon
 - Test runner: Vitest.
 
 ## Open questions
-- Cambios pedidos por el usuario sobre la spec: pendiente de detalle.
+- (ninguna)
