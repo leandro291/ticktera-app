@@ -1,4 +1,4 @@
-# Ticketera — Features UI (búsqueda → compra → cuenta → organizador)
+# Ticketera — UI (landing + búsqueda → compra → cuenta → organizador)
 
 - Module: shared (event, purchase, auth, account, organizer)
 - Status: draft
@@ -6,12 +6,13 @@
 - Mode: SDD
 
 ## Goal
-Implementar en Next.js las pantallas de features 2–8 del diseño de Claude Design (desktop 1440 + móvil 390), solo UI/UX con datos mock y estado en cliente, incluyendo un **mapa de asientos seleccionable** con zoom/pan para las zonas numeradas.
+Implementar en Next.js la landing y las pantallas de features 2–8 del diseño de Claude Design (desktop 1440 + móvil 390), solo UI/UX con datos mock y estado en cliente, incluyendo un **mapa de asientos seleccionable** con zoom/pan para las zonas numeradas.
 
-Fuente visual: artifact de diseño `Ticketera Landing Redesign` (tableros `Search`, `EventDetail`, `Tickets`, `Checkout`, `Confirmation`, `Auth`, `MyTickets`, `OrgDashboard`, `OrgCreate` y sus variantes `*Mobile`). Donde esta spec no diga algo, manda el diseño.
+Fuente visual: artifact de diseño `Ticketera Landing Redesign` (tableros `Main` (landing, Hero A), `Mobile`, `Search`, `EventDetail`, `Tickets`, `Checkout`, `Confirmation`, `Auth`, `MyTickets`, `OrgDashboard`, `OrgCreate` y sus variantes `*Mobile`). Donde esta spec no diga algo, manda el diseño.
 
 ## Scope
 - In:
+  - Landing `/` (Hero A panel partido con carrusel autoplay pausable, categorías, grilla de eventos filtrable por categoría, secciones del diseño; versión móvil).
   - Design tokens del diseño (Poppins, indigo `#4F46E5` primario, naranja `#F97316` CTA, neutros zinc, radios 12–24px) en `app/globals.css`.
   - Datos mock tipados (los 10 eventos de la landing, zonas/precios, butacas, pedidos, eventos del organizador) e imágenes del diseño en `public/images/events/`.
   - Header/footer públicos compartidos, header de pasos de compra.
@@ -24,7 +25,7 @@ Fuente visual: artifact de diseño `Ticketera Landing Redesign` (tableros `Searc
   - 8 · Panel de organizador y Crear evento (formulario con tipos de entrada dinámicos + vista previa en vivo).
   - Responsive: un único componente por pantalla, mobile-first, layout desktop desde `lg`.
 - Out:
-  - Landing (`/`): no existe en código todavía; esta spec **no** la implementa (ver Open questions).
+  - Variante Hero B del diseño (se usa Hero A).
   - Backend, auth real, pagos reales, persistencia (el carrito vive en memoria del cliente).
   - Editor de mapas de asientos para el organizador (solo se consume un layout mock).
   - QR real, emails, i18n, dark mode.
@@ -52,6 +53,7 @@ Por qué: cada butaca es un `<button>`/elemento SVG con `aria-label`, foco por t
 ## Routes (app/ = solo routing)
 | Ruta | Pantalla |
 | ---- | -------- |
+| `/` | Landing |
 | `/events` | Búsqueda y listado (`?q=&category=`) |
 | `/events/[id]` | Detalle |
 | `/events/[id]/tickets` | Selección de entradas / mapa |
@@ -64,6 +66,7 @@ Por qué: cada butaca es un `<button>`/elemento SVG con `aria-label`, foco por t
 
 ## Acceptance criteria
 - AC1 (tokens): la app usa Poppins, primario `#4F46E5`, CTA naranja `#F97316` con texto `#18181B`, fondo `#F4F4F5` en flujos de compra; `focus-visible` con anillo `#818CF8`.
+- AC0 (landing): `/` replica `Main`/`Mobile`: carrusel de 5 destacados (autoplay 6s, pausa/reproducir, anterior/siguiente, se detiene con `prefers-reduced-motion`), chips de categoría que filtran la grilla con estado vacío, tarjetas que enlazan a `/events/[id]`, buscador que navega a `/events?q=`.
 - AC2 (búsqueda): `/events` lista los 10 eventos mock; buscar por texto filtra por título/lugar/ciudad; filtros por categoría, ciudad, fecha y precio; chips de filtros activos removibles; orden por fecha o precio; estado vacío con "Limpiar filtros". En móvil los filtros abren un panel a pantalla completa con botón "Ver N eventos".
 - AC3 (detalle): `/events/[id]` muestra hero, acerca, información importante, lugar, tarjeta de entradas por zona (Agotado / Últimas entradas) y relacionados; botón guardar alterna estado; CTA lleva a `/events/[id]/tickets`. En móvil hay barra de compra fija abajo. `id` inexistente → `notFound()`.
 - AC4 (mapa de zonas): la pantalla de entradas dibuja el mapa de zonas del diseño (Escenario, Campo VIP, Campo General, Tribunas Occidente/Oriente/Norte) como SVG accesible; zonas agotadas se ven deshabilitadas; tocar una zona la selecciona (`aria-pressed`) y resalta su fila en la lista.
@@ -153,6 +156,11 @@ export function getCartSummary(lines: CartLine[], zones: Zone[]): { items: { zon
 | T3 | header/footer públicos y header de pasos | components/shared/site-header.tsx, components/shared/site-footer.tsx, components/shared/checkout-steps.tsx, components/shared/logo.tsx | T1 | B | AC1, AC14 | todo |
 | T4 | búsqueda y listado | modules/event/components/event-card.tsx, modules/event/components/event-search.tsx, modules/event/components/event-filters.tsx, modules/event/index.ts, app/events/page.tsx | T2, T3 | C | AC2, AC14 | todo |
 
+### Phase 1b — Landing
+| ID | Task | Owns | Depends on | Group | Criteria | Status |
+| -- | ---- | ---- | ---------- | ----- | -------- | ------ |
+| T4b | landing: hero carrusel, categorías, grilla, secciones | modules/event/components/featured-carousel.tsx, modules/event/components/home-page.tsx, modules/event/components/category-chips.tsx, app/page.tsx | Phase 1 | A | AC0, AC14 | todo |
+
 ### Phase 2 — Detalle + selección de entradas con mapa
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
@@ -180,7 +188,10 @@ export function getCartSummary(lines: CartLine[], zones: Zone[]): { items: { zon
 | T14 | panel resumen + mis eventos | modules/organizer/components/organizer-dashboard.tsx, modules/organizer/data/*, app/organizer/page.tsx | T13 | B | AC12 | todo |
 | T15 | crear evento + vista previa | modules/organizer/components/event-form*.tsx, app/organizer/events/new/page.tsx | T13 | B | AC13 | todo |
 
+## Decisions
+- Landing incluida (Phase 1b), reemplaza la página del template.
+- Rutas en inglés (SETUP §1).
+- Test runner: Vitest.
+
 ## Open questions
-- Landing (`/`): el repo está vacío (solo el template). ¿La implementamos también (fase 0) o `/` redirige temporalmente a `/events`?
-- Idioma de rutas: SETUP pide nombres en inglés → se usan rutas en inglés (`/events`, `/my-tickets`). ¿OK o preferís rutas en español para SEO (`/eventos`)?
-- Test runner: se propone **Vitest** (primer test del repo) para la lógica del carrito y los filtros.
+- Cambios pedidos por el usuario sobre la spec: pendiente de detalle.
