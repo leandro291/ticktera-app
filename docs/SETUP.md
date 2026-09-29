@@ -29,6 +29,8 @@ Stack: Next.js (App Router), React, TypeScript, Tailwind, shadcn/ui, TanStack Qu
 6. **Un módulo no importa los internos de otro.** Lo que se comparte entre módulos se expone desde su `index.ts` o se sube a `components/shared`, `hooks` o `lib`.
 7. **Solo se crean las subcarpetas que el módulo necesita** (YAGNI). Un módulo puede tener únicamente `components/` y `types/`.
 
+> **Excepción `db/`:** la base de datos es transversal. Las FK entre dominios obligarían a importar internos de otro módulo (regla 6), por eso el schema vive en `db/schema/<dominio>.ts` y no dentro de cada módulo.
+
 ### Estructura base
 
 ```
@@ -62,6 +64,7 @@ components/
   shared/                     # componentes reutilizables entre módulos
 hooks/                        # hooks reutilizables entre módulos
 lib/                          # utilidades transversales (cn, axios instance)
+db/                           # schema Drizzle (transversal: FK cruzan dominios) + drizzle.config.ts en la raíz
 docs/                         # documentación (SETUP, design system)
 specs/                        # specs SDD: specs/<module>/<feature>.md
 ```
