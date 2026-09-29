@@ -213,9 +213,18 @@ Notas de implementación (Phase 4):
 ### Phase 5 — Organizador
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T13 | layout del panel (sidebar/drawer) | modules/organizer/components/organizer-shell.tsx, app/organizer/layout.tsx | Phase 4 | A | AC12 | todo |
-| T14 | panel resumen + mis eventos | modules/organizer/components/organizer-dashboard.tsx, modules/organizer/data/*, app/organizer/page.tsx | T13 | B | AC12 | todo |
-| T15 | crear evento + vista previa | modules/organizer/components/event-form*.tsx, app/organizer/events/new/page.tsx | T13 | B | AC13 | todo |
+| T13 | layout del panel (sidebar/drawer) | modules/organizer/components/organizer-shell.tsx, components/shared/logo.tsx, app/organizer/layout.tsx | Phase 4 | A | AC12 | done |
+| T14 | panel resumen + mis eventos | modules/organizer/components/organizer-dashboard.tsx, event-sales-sheet.tsx, sold-bar.tsx, modules/organizer/data/*, modules/organizer/lib/event-stats.ts (+test), modules/organizer/store/use-organizer-store.ts, modules/organizer/types/organizer-event.ts, app/organizer/page.tsx | T13 | B | AC12 | done |
+| T15 | crear evento + vista previa | modules/organizer/components/event-form*.tsx, event-form-styles.ts, modules/organizer/lib/event-draft.ts (+test), modules/event/index.ts, modules/organizer/index.ts, app/organizer/events/new/page.tsx | T13 | B | AC12, AC13 | done |
+
+Notas de implementación (Phase 5):
+- Layout propio en `/organizer` (sin header/footer del sitio): sidebar fijo desde `lg` y barra superior con drawer en móvil. "Ventas" y "Configuración" se muestran deshabilitadas con la etiqueta "Pronto" (no existen aún). La cuenta abajo usa la sesión de `@/modules/auth` ("Organizador demo" sin sesión).
+- Datos: los 4 eventos de ejemplo del diseño con tipos de entrada (`OrganizerEvent.tiers`); vendidas, capacidad e ingresos se derivan de los tipos (`lib/event-stats`). `useOrganizerStore` los guarda en memoria: recargar restaura los datos de ejemplo.
+- Acción por fila: publicado → "Ver ventas" abre un panel con el detalle por tipo de entrada (y link a la página pública si el evento está en el catálogo); borrador → "Editar" abre el formulario en `/organizer/events/new?draft=<id>` con los datos cargados.
+- Crear evento: "Publicar" valida con `required` nativo (nombre, fecha, hora, lugar, ciudad y cada tipo de entrada); "Guardar borrador" solo exige el nombre. Ambos guardan en el store y vuelven a `/organizer?saved=published|draft` con un aviso. Mínimo 1 tipo de entrada (el botón de quitar se deshabilita).
+- La portada se previsualiza con un object URL local (clic o arrastrar; solo JPG/PNG); no se sube a ningún lado.
+- Vista previa en vivo: replica la `EventCard` del catálogo (horizontal en móvil, vertical en escritorio) con placeholders; no es un link.
+- Contratos nuevos: `OrganizerEvent`, `TicketTier`, `TierDraft`, `EventDraft` (`modules/organizer/types/organizer-event.ts`). `@/modules/event` ahora exporta `EVENT_CATEGORIES`.
 
 ## Decisions
 - Landing incluida (Phase 1b), reemplaza la página del template.

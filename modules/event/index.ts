@@ -5,4 +5,5 @@ export { HomePage } from "./components/home-page";
 export { formatDateLong, formatDateShort, formatPrice } from "./lib/format";
 export { parseEventSearchParams } from "./lib/search-params";
 export { getEventById, getEvents, getFeaturedEvents, getRelatedEvents } from "./services/event-service";
+export { EVENT_CATEGORIES } from "./types/event";
 export type { AvailabilityStatus, Currency, EventCategory, EventDetail, EventSummary, VenueLayoutId } from "./types/event";
