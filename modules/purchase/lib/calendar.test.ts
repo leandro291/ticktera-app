@@ -9,6 +9,7 @@ const order: Order = {
   items: [],
   total: 190,
   count: 2,
+  buyerName: "Ana Pérez",
   email: "",
   paymentMethod: "card",
 };

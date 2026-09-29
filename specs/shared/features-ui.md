@@ -201,8 +201,14 @@ Notas de implementación (Phase 3):
 ### Phase 4 — Cuenta
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T11 | login / registro | modules/auth/components/*, modules/auth/index.ts, app/login/page.tsx | Phase 3 | A | AC10 | todo |
-| T12 | mis entradas | modules/account/**, app/my-tickets/page.tsx | Phase 3 | A | AC11 | todo |
+| T11 | login / registro + sesión mock + cuenta en el header | modules/auth/components/auth-page.tsx, password-input.tsx, account-menu.tsx, modules/auth/store/use-session-store.ts, modules/auth/lib/display-name.ts (+test), modules/auth/index.ts, components/shared/site-header.tsx, components/shared/mobile-menu.tsx, app/login/page.tsx | Phase 3 | A | AC10 | done |
+| T12 | mis entradas | modules/account/components/my-tickets.tsx, modules/account/data/sample-orders.ts, modules/account/lib/split-orders.ts (+test), modules/account/index.ts, modules/purchase/types/order.ts, modules/purchase/lib/order.ts (+test), modules/purchase/store/use-order-store.ts, modules/purchase/index.ts, app/my-tickets/page.tsx | Phase 3 | A | AC11 | done |
+
+Notas de implementación (Phase 4):
+- Sesión simulada en memoria (`useSessionStore`): login usa el email (nombre derivado del email), registro pide nombre, email, contraseña (mín. 8) y términos. Tras enviar navega a `?redirect=` (solo rutas del mismo sitio) o a `/my-tickets`. Recargar cierra la sesión (sin persistencia).
+- Header: sin sesión muestra "Iniciar sesión" / "Ingresar" (con `redirect` a la página actual); con sesión, "Mis entradas" + avatar con iniciales que abre un panel con nombre, email y "Cerrar sesión". `components/shared/site-header.tsx` consume `AccountMenu` desde `@/modules/auth` (API pública).
+- `/my-tickets` no exige sesión (UI mock): une los 2 pedidos de ejemplo del diseño con los pagados en la sesión (`useOrderStore.orders`), separa Próximas/Pasadas por fecha y muestra cada entrada con su QR decorativo, zona/butaca, titular y código `TK-NNNNN-0N`.
+- Cambio de contrato: `Order` suma `buyerName`, `event.startTime` y `items[].seats` (una butaca por entrada); `useOrderStore` guarda la lista `orders` (`useLastOrder`, `usePlacedOrders`).
 
 ### Phase 5 — Organizador
 | ID | Task | Owns | Depends on | Group | Criteria | Status |

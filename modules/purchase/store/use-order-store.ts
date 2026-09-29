@@ -2,12 +2,18 @@ import { create } from "zustand";
 import type { Order } from "../types/order";
 
 interface OrderState {
-  /** Last paid order, shown on the confirmation screen. */
-  lastOrder: Order | null;
+  /** Orders paid in this session, newest first. */
+  orders: Order[];
   placeOrder: (order: Order) => void;
 }
 
 export const useOrderStore = create<OrderState>()((set) => ({
-  lastOrder: null,
-  placeOrder: (order) => set({ lastOrder: order }),
+  orders: [],
+  placeOrder: (order) => set((state) => ({ orders: [order, ...state.orders] })),
 }));
+
+/** Last paid order, shown on the confirmation screen. */
+export const useLastOrder = () => useOrderStore((s) => s.orders[0] ?? null);
+
+/** Orders paid in this session (for "Mis entradas"). */
+export const usePlacedOrders = () => useOrderStore((s) => s.orders);

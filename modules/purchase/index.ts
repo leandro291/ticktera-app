@@ -3,4 +3,8 @@ export { PurchaseConfirmation } from "./components/purchase-confirmation";
 export { PurchaseHeader } from "./components/purchase-header";
 export { TicketSelection } from "./components/ticket-selection";
 export { ZonePriceList } from "./components/zone-price-list";
+export { downloadOrderIcs } from "./lib/calendar";
+export { formatOrderSeats, getOrderTickets, type OrderTicket } from "./lib/order";
 export { getEventVenue } from "./services/venue-service";
+export { usePlacedOrders } from "./store/use-order-store";
+export type { Order } from "./types/order";

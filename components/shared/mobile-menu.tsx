@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { MenuIcon } from "lucide-react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { SITE_NAV } from "./site-nav";
 
-const MENU_LINKS = [...SITE_NAV, { href: "/login", label: "Iniciar sesión" }, { href: "/organizer", label: "Vender entradas" }];
+const MENU_LINKS = [...SITE_NAV, { href: "/my-tickets", label: "Mis entradas" }, { href: "/organizer", label: "Vender entradas" }];
 
 export function MobileMenu() {
   return (
@@ -22,13 +22,14 @@ export function MobileMenu() {
         </SheetHeader>
         <nav aria-label="Menú" className="flex flex-col p-2">
           {MENU_LINKS.map((link) => (
-            <Link
+            <SheetClose
               key={link.href}
-              href={link.href}
-              className="flex h-12 items-center rounded-xl px-3 text-base font-medium text-foreground hover:bg-muted"
+              render={<Link href={link.href} />}
+              nativeButton={false}
+              className="flex h-12 items-center rounded-xl px-3 text-base font-medium text-foreground hover:bg-muted hover:text-foreground"
             >
               {link.label}
-            </Link>
+            </SheetClose>
           ))}
         </nav>
       </SheetContent>

@@ -5,8 +5,9 @@ import Link from "next/link";
 import { ArrowRightIcon, CalendarPlusIcon, CheckIcon, DownloadIcon, MailIcon, QrCodeIcon, TicketIcon } from "lucide-react";
 import { DecorativeQr } from "@/components/shared/decorative-qr";
 import { formatDateLong, formatPrice } from "@/modules/event";
-import { buildOrderIcs } from "../lib/calendar";
-import { useOrderStore } from "../store/use-order-store";
+import { downloadOrderIcs } from "../lib/calendar";
+import { formatOrderSeats } from "../lib/order";
+import { useLastOrder } from "../store/use-order-store";
 
 const NEXT_STEPS = [
   { icon: MailIcon, title: "Revisa tu correo", text: "Ahí llegan tus entradas y el comprobante de pago." },
@@ -19,7 +20,7 @@ const secondaryButton =
   "flex h-[50px] items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-input bg-background text-sm font-medium hover:border-foreground lg:h-[54px] lg:gap-2 lg:rounded-2xl lg:px-[22px] lg:text-[15px]";
 
 export function PurchaseConfirmation() {
-  const order = useOrderStore((s) => s.lastOrder);
+  const order = useLastOrder();
 
   if (!order) {
     return (
@@ -40,14 +41,8 @@ export function PurchaseConfirmation() {
     { label: "Entradas", value: String(order.count) },
     { label: "Total pagado", value: formatPrice(order.total, order.currency) },
   ];
-  const seatLabels = order.items.filter((i) => i.seatLabel).map((i) => `${i.zoneName}: ${i.seatLabel}`);
-
-  const downloadCalendar = () => {
-    const url = URL.createObjectURL(new Blob([buildOrderIcs(order)], { type: "text/calendar" }));
-    const link = Object.assign(document.createElement("a"), { href: url, download: `${order.code}.ics` });
-    link.click();
-    URL.revokeObjectURL(url);
-  };
+  const seatLabels = order.items.filter((i) => i.seats.length).map((i) => `${i.zoneName}: ${formatOrderSeats(i.seats)}`);
+  const downloadCalendar = () => downloadOrderIcs(order);
 
   return (
     <div className="mx-auto flex w-full max-w-[880px] flex-col gap-6 px-4 pt-7 pb-9 lg:items-center lg:gap-9 lg:px-0 lg:pt-14 lg:pb-[72px]">
@@ -87,7 +82,7 @@ export function PurchaseConfirmation() {
         <div className="relative flex flex-col items-center justify-center gap-2.5 border-t-[1.5px] border-dashed border-input p-[22px] lg:w-[220px] lg:shrink-0 lg:border-t-0 lg:border-l-[1.5px] lg:p-0">
           <span className={`${notch} -top-3 -left-3`} />
           <span className={`${notch} -top-3 -right-3 lg:right-auto lg:-bottom-3 lg:top-auto lg:-left-3`} />
-          <DecorativeQr seed={`${order.code}-1`} className="size-[168px] lg:size-[126px]" />
+          <DecorativeQr seed={`${order.code}-01`} className="size-[168px] lg:size-[126px]" />
           <span className="text-[13px] text-muted-foreground">Entrada 1 de {order.count}</span>
         </div>
       </article>

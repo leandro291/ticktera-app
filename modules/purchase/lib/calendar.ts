@@ -24,3 +24,11 @@ export function buildOrderIcs(order: Order): string {
     "END:VCALENDAR",
   ].join("\r\n");
 }
+
+/** Browser-only: saves the order as `<code>.ics`. */
+export function downloadOrderIcs(order: Order) {
+  const url = URL.createObjectURL(new Blob([buildOrderIcs(order)], { type: "text/calendar" }));
+  const link = Object.assign(document.createElement("a"), { href: url, download: `${order.code}.ics` });
+  link.click();
+  URL.revokeObjectURL(url);
+}

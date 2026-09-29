@@ -1,3 +1,4 @@
+export { EventDateBadge } from "./components/event-date-badge";
 export { EventDetailView } from "./components/event-detail-view";
 export { EventSearch } from "./components/event-search";
 export { HomePage } from "./components/home-page";

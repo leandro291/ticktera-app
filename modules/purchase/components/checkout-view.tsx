@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronDownIcon, LoaderCircleIcon, LockIcon, ShoppingCartIcon, TimerIcon, TimerOffIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { formatDateShort, formatPrice, type EventSummary } from "@/modules/event";
+import { formatDateShort, formatPrice, type EventDetail, type EventSummary } from "@/modules/event";
 import { cn } from "@/lib/utils";
 import { useCountdown } from "../hooks/use-countdown";
 import { useEventCart } from "../hooks/use-event-cart";
@@ -23,7 +23,7 @@ const HOLD_SECONDS = 10 * 60;
 const FORM_ID = "checkout-form";
 
 interface CheckoutViewProps {
-  event: EventSummary | null;
+  event: EventDetail | null;
   venue: EventVenue | null;
 }
 
@@ -83,7 +83,7 @@ function PayButton({ label, enabled, paying, className }: { label: string; enabl
   );
 }
 
-function CheckoutContent({ event, venue }: { event: EventSummary; venue: EventVenue }) {
+function CheckoutContent({ event, venue }: { event: EventDetail; venue: EventVenue }) {
   const router = useRouter();
   const { summary } = useEventCart(venue);
   const clearCart = useCartStore((s) => s.clear);
@@ -105,11 +105,13 @@ function CheckoutContent({ event, venue }: { event: EventSummary; venue: EventVe
   const submit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!canPay || paying) return;
-    const email = String(new FormData(e.currentTarget).get("email") ?? "");
+    const data = new FormData(e.currentTarget);
+    const buyerName = String(data.get("name") ?? "");
+    const email = String(data.get("email") ?? "");
     setPaying(true);
     // Simulated payment round-trip.
     setTimeout(() => {
-      placeOrder(createOrder({ code: generateOrderCode(), event, summary, email, paymentMethod: method }));
+      placeOrder(createOrder({ code: generateOrderCode(), event, summary, buyerName, email, paymentMethod: method }));
       clearCart();
       router.push("/checkout/confirmation");
     }, 900);

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { AccountMenu } from "@/modules/auth";
 import { Logo } from "./logo";
 import { MobileMenu } from "./mobile-menu";
 import { NavLink } from "./nav-link";
@@ -17,22 +18,17 @@ export function SiteHeader({ className }: { className?: string }) {
             </NavLink>
           ))}
         </nav>
-        <div className="hidden items-center gap-2 lg:flex">
-          <Link href="/login" className="flex h-11 items-center rounded-xl px-[18px] text-[15px] font-medium text-foreground hover:bg-muted">
-            Iniciar sesión
-          </Link>
+        <div className="flex items-center gap-1 lg:gap-2">
+          <AccountMenu />
           <Link
             href="/organizer"
-            className="flex h-11 items-center rounded-xl border-[1.5px] border-input px-[18px] text-[15px] font-semibold text-foreground hover:border-foreground"
+            className="hidden h-11 items-center rounded-xl border-[1.5px] border-input px-[18px] text-[15px] font-semibold text-foreground hover:border-foreground lg:flex"
           >
             Vender entradas
           </Link>
-        </div>
-        <div className="flex items-center gap-1 lg:hidden">
-          <Link href="/login" className="flex h-11 items-center px-3 text-sm font-medium text-foreground">
-            Ingresar
-          </Link>
-          <MobileMenu />
+          <div className="lg:hidden">
+            <MobileMenu />
+          </div>
         </div>
       </div>
     </header>
