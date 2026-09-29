@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { InfoIcon, QrCodeIcon, StoreIcon } from "lucide-react";
+import { RequiredMark } from "@/components/shared/required-mark";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -40,19 +41,30 @@ export function CheckoutFields({ method, onMethodChange, disabled }: CheckoutFie
       <section className={card}>
         <div className="flex flex-col gap-1">
           <h2 className="text-lg font-semibold lg:text-xl">Datos del comprador</h2>
-          <p className="text-[13px] text-muted-foreground lg:text-sm">Enviaremos tus entradas al correo que indiques.</p>
+          <p className="text-[13px] text-muted-foreground lg:text-sm">
+            Enviaremos tus entradas al correo que indiques. Los campos con <span className="text-destructive">*</span> son obligatorios.
+          </p>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-x-5 lg:gap-y-[18px]">
           <label className={label}>
-            Nombre completo
+            <span>
+              Nombre completo
+              <RequiredMark />
+            </span>
             <Input name="name" required autoComplete="name" placeholder="Como figura en tu documento" className={field} />
           </label>
           <label className={label}>
-            Correo electrónico
+            <span>
+              Correo electrónico
+              <RequiredMark />
+            </span>
             <Input name="email" type="email" required autoComplete="email" placeholder="tu@email.com" className={field} />
           </label>
           <div className={label}>
-            <span id="document-label">Documento de identidad</span>
+            <span id="document-label">
+              Documento de identidad
+              <RequiredMark />
+            </span>
             <div className="flex gap-2">
               <Select items={DOCUMENT_TYPES} defaultValue="dni" name="documentType">
                 <SelectTrigger aria-label="Tipo de documento" className={cn(field, "w-[110px] shrink-0 px-3 data-[size=default]:h-[52px]")}>
@@ -77,7 +89,10 @@ export function CheckoutFields({ method, onMethodChange, disabled }: CheckoutFie
             </div>
           </div>
           <label className={label}>
-            Celular
+            <span>
+              Celular
+              <RequiredMark />
+            </span>
             <Input name="phone" type="tel" required autoComplete="tel" placeholder="Número de celular" className={field} />
           </label>
         </div>
@@ -109,7 +124,10 @@ export function CheckoutFields({ method, onMethodChange, disabled }: CheckoutFie
         {method === "card" && (
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-x-5 lg:gap-y-[18px]">
             <label className={cn(label, "col-span-2")}>
-              Número de tarjeta
+              <span>
+                Número de tarjeta
+                <RequiredMark />
+              </span>
               <Input
                 name="cardNumber"
                 required
@@ -123,7 +141,10 @@ export function CheckoutFields({ method, onMethodChange, disabled }: CheckoutFie
               />
             </label>
             <label className={label}>
-              Vencimiento
+              <span>
+                Vencimiento
+                <RequiredMark />
+              </span>
               <Input
                 name="cardExpiry"
                 required
@@ -136,7 +157,10 @@ export function CheckoutFields({ method, onMethodChange, disabled }: CheckoutFie
               />
             </label>
             <label className={label}>
-              CVV
+              <span>
+                CVV
+                <RequiredMark />
+              </span>
               <Input
                 name="cardCvv"
                 required
@@ -149,7 +173,10 @@ export function CheckoutFields({ method, onMethodChange, disabled }: CheckoutFie
               />
             </label>
             <label className={cn(label, "col-span-2 lg:col-span-4")}>
-              Nombre en la tarjeta
+              <span>
+                Nombre en la tarjeta
+                <RequiredMark />
+              </span>
               <Input name="cardName" required autoComplete="cc-name" placeholder="Como aparece en la tarjeta" className={field} />
             </label>
           </div>

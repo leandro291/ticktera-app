@@ -1,14 +1,15 @@
 import { cn } from "@/lib/utils";
 
-const SIZE = 21;
+export const QR_SIZE = 21;
+const SIZE = QR_SIZE;
 const FINDERS = [
   [0, 0],
   [0, SIZE - 7],
   [SIZE - 7, 0],
 ];
 
-/** QR-looking pattern (21×21 with the three finder marks). Decorative only: it encodes nothing. */
-function qrCells(seed: string): boolean[] {
+/** QR-looking pattern (21×21 with the three finder marks), row by row. Decorative only: it encodes nothing. */
+export function qrCells(seed: string): boolean[] {
   let x = [...seed].reduce((acc, ch) => (acc * 31 + ch.charCodeAt(0)) % 233280, 7);
   const random = () => {
     x = (x * 9301 + 49297) % 233280;

@@ -22,6 +22,13 @@ describe("buildOrderIcs", () => {
     expect(ics).toContain("UID:TK-24817@ticketera");
   });
 
+  it("AC9: books a 3-hour event when the start time is known", () => {
+    const ics = buildOrderIcs({ ...order, event: { ...order.event, startTime: "22:30" } }, new Date(Date.UTC(2026, 8, 29, 10, 5, 7)));
+    expect(ics).toContain("DTSTART:20261231T223000");
+    expect(ics).toContain("DTEND:20270101T013000");
+    expect(ics).toContain("DTSTAMP:20260929T100507Z");
+  });
+
   it("AC9: escapes commas in text fields", () => {
     expect(buildOrderIcs(order)).toContain("LOCATION:Gran Teatro Nacional\\, Lima\\, Perú");
   });

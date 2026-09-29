@@ -2,9 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRightIcon, CalendarPlusIcon, CheckIcon, DownloadIcon, MailIcon, QrCodeIcon, TicketIcon } from "lucide-react";
+import { ArrowRightIcon, CalendarPlusIcon, CheckIcon, DownloadIcon, LoaderCircleIcon, MailIcon, QrCodeIcon, TicketIcon } from "lucide-react";
 import { DecorativeQr } from "@/components/shared/decorative-qr";
 import { formatDateLong, formatPrice } from "@/modules/event";
+import { useOrderPdf } from "../hooks/use-order-pdf";
 import { downloadOrderIcs } from "../lib/calendar";
 import { formatOrderSeats } from "../lib/order";
 import { useLastOrder } from "../store/use-order-store";
@@ -17,10 +18,11 @@ const NEXT_STEPS = [
 
 const notch = "absolute size-6 rounded-full border border-border bg-canvas";
 const secondaryButton =
-  "flex h-[50px] items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-input bg-background text-sm font-medium hover:border-foreground lg:h-[54px] lg:gap-2 lg:rounded-2xl lg:px-[22px] lg:text-[15px]";
+  "flex h-[50px] items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-input bg-background text-sm font-medium hover:border-foreground disabled:cursor-wait disabled:opacity-70 lg:h-[54px] lg:gap-2 lg:rounded-2xl lg:px-[22px] lg:text-[15px]";
 
 export function PurchaseConfirmation() {
   const order = useLastOrder();
+  const pdf = useOrderPdf(order);
 
   if (!order) {
     return (
@@ -101,12 +103,17 @@ export function PurchaseConfirmation() {
             <span className="lg:hidden">Calendario</span>
             <span className="hidden lg:inline">Agregar al calendario</span>
           </button>
-          <button type="button" onClick={() => window.print()} className={secondaryButton}>
-            <DownloadIcon className="size-[18px]" aria-hidden />
-            Descargar PDF
+          <button type="button" onClick={pdf.download} disabled={pdf.pending} aria-busy={pdf.pending} className={secondaryButton}>
+            {pdf.pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden /> : <DownloadIcon className="size-[18px]" aria-hidden />}
+            {pdf.pending ? "Generando…" : "Descargar PDF"}
           </button>
         </div>
       </div>
+      {pdf.failed && (
+        <p role="alert" className="-mt-3 text-sm font-medium text-destructive lg:-mt-6">
+          No pudimos generar el PDF. Inténtalo de nuevo.
+        </p>
+      )}
 
       <section className="flex w-full flex-col gap-2.5 lg:mt-3">
         <h2 className="text-lg font-semibold lg:sr-only">Qué sigue</h2>

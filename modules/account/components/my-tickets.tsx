@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarIcon, CalendarPlusIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, DownloadIcon, MapPinIcon, TicketIcon } from "lucide-react";
+import { CalendarIcon, CalendarPlusIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, DownloadIcon, LoaderCircleIcon, MapPinIcon, TicketIcon } from "lucide-react";
 import { DecorativeQr } from "@/components/shared/decorative-qr";
 import { cn } from "@/lib/utils";
 import { EventDateBadge, formatDateLong, formatDateShort } from "@/modules/event";
-import { downloadOrderIcs, getOrderTickets, usePlacedOrders, type Order } from "@/modules/purchase";
+import { downloadOrderIcs, getOrderTickets, useOrderPdf, usePlacedOrders, type Order } from "@/modules/purchase";
 import { SAMPLE_ORDERS } from "../data/sample-orders";
 import { splitOrdersByDate, todayIso } from "../lib/split-orders";
 
@@ -21,6 +21,7 @@ const ticketCount = (n: number) => (n === 1 ? "1 entrada" : `${n} entradas`);
 function OrderTicket({ order }: { order: Order }) {
   const tickets = getOrderTickets(order);
   const [index, setIndex] = useState(0);
+  const pdf = useOrderPdf(order);
   const ticket = tickets[Math.min(index, tickets.length - 1)];
   const { event } = order;
   const zone = ticket.seat ? `${ticket.zoneName} · Fila ${ticket.seat.row}, ${ticket.seat.number}` : ticket.zoneName;
@@ -60,54 +61,62 @@ function OrderTicket({ order }: { order: Order }) {
         <span className={`${notch} -left-3`} />
         <span className={`${notch} -right-3`} />
       </div>
-      <div className="flex flex-col items-center gap-[18px] px-5 pt-[22px] pb-6 lg:flex-row lg:gap-9 lg:px-8 lg:pt-7 lg:pb-8">
-        <div className="size-[220px] shrink-0 rounded-[18px] border border-border bg-white p-3 lg:size-[200px]">
-          <DecorativeQr seed={ticket.code} className="size-full" />
-        </div>
-        <div className="flex w-full grow flex-col gap-[18px]">
-          <div className="flex items-center justify-between">
-            <button type="button" aria-label="Entrada anterior" disabled={index === 0} onClick={() => setIndex((i) => i - 1)} className={cn(navButton, "lg:hidden")}>
-              <ChevronLeftIcon className="size-[18px]" aria-hidden />
-            </button>
-            <span aria-live="polite" className="text-base font-semibold lg:text-xl lg:font-bold">
-              Entrada {index + 1} de {tickets.length}
-            </span>
-            <span className="flex gap-1.5">
-              <button type="button" aria-label="Entrada anterior" disabled={index === 0} onClick={() => setIndex((i) => i - 1)} className={cn(navButton, "hidden lg:flex")}>
+      <div className="@container px-5 pt-[22px] pb-6 lg:px-8 lg:pt-7 lg:pb-8">
+        <div className="flex flex-col items-center gap-[18px] @xl:flex-row @xl:gap-9">
+          <div className="size-[220px] shrink-0 rounded-[18px] border border-border bg-white p-3 @xl:size-[200px]">
+            <DecorativeQr seed={ticket.code} className="size-full" />
+          </div>
+          <div className="flex w-full min-w-0 grow flex-col gap-[18px]">
+            <div className="flex items-center justify-between gap-2">
+              <button type="button" aria-label="Entrada anterior" disabled={index === 0} onClick={() => setIndex((i) => i - 1)} className={cn(navButton, "@xl:hidden")}>
                 <ChevronLeftIcon className="size-[18px]" aria-hidden />
               </button>
-              <button type="button" aria-label="Entrada siguiente" disabled={index >= tickets.length - 1} onClick={() => setIndex((i) => i + 1)} className={navButton}>
-                <ChevronRightIcon className="size-[18px]" aria-hidden />
+              <span aria-live="polite" className="text-base font-semibold whitespace-nowrap @xl:text-xl @xl:font-bold">
+                Entrada {index + 1} de {tickets.length}
+              </span>
+              <span className="flex shrink-0 gap-1.5">
+                <button type="button" aria-label="Entrada anterior" disabled={index === 0} onClick={() => setIndex((i) => i - 1)} className={cn(navButton, "hidden @xl:flex")}>
+                  <ChevronLeftIcon className="size-[18px]" aria-hidden />
+                </button>
+                <button type="button" aria-label="Entrada siguiente" disabled={index >= tickets.length - 1} onClick={() => setIndex((i) => i + 1)} className={navButton}>
+                  <ChevronRightIcon className="size-[18px]" aria-hidden />
+                </button>
+              </span>
+            </div>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-3.5">
+              {facts.map((f) => (
+                <div key={f.label} className="flex min-w-0 flex-col gap-0.5">
+                  <dt className="text-[11px] text-muted-foreground lg:text-xs">{f.label}</dt>
+                  <dd className={cn("text-[15px] font-semibold break-words lg:text-base", f.className)}>{f.value}</dd>
+                </div>
+              ))}
+            </dl>
+            <div className="grid grid-cols-2 gap-2.5 @xl:flex">
+              <button
+                type="button"
+                onClick={pdf.download}
+                disabled={pdf.pending}
+                aria-busy={pdf.pending}
+                className="flex h-12 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-strong bg-background px-[18px] text-sm font-semibold whitespace-nowrap disabled:cursor-wait disabled:opacity-70 @xl:gap-2"
+              >
+                {pdf.pending ? <LoaderCircleIcon className="size-4 animate-spin" aria-hidden /> : <DownloadIcon className="size-4" aria-hidden />}
+                {pdf.pending ? "Generando…" : <><span className="@xl:hidden">PDF</span><span className="hidden @xl:inline">Descargar PDF</span></>}
               </button>
-            </span>
-          </div>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3 lg:gap-x-6 lg:gap-y-3.5">
-            {facts.map((f) => (
-              <div key={f.label} className="flex min-w-0 flex-col gap-0.5">
-                <dt className="text-[11px] text-muted-foreground lg:text-xs">{f.label}</dt>
-                <dd className={cn("text-[15px] font-semibold lg:text-base", f.className)}>{f.value}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="grid grid-cols-2 gap-2.5 lg:flex">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="flex h-12 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-strong bg-background px-[18px] text-sm font-semibold lg:gap-2"
-            >
-              <DownloadIcon className="size-4" aria-hidden />
-              <span className="lg:hidden">PDF</span>
-              <span className="hidden lg:inline">Descargar PDF</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => downloadOrderIcs(order)}
-              className="flex h-12 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-input bg-background px-[18px] text-sm font-medium hover:border-foreground lg:gap-2"
-            >
-              <CalendarPlusIcon className="size-4" aria-hidden />
-              <span className="lg:hidden">Calendario</span>
-              <span className="hidden lg:inline">Agregar al calendario</span>
-            </button>
+              <button
+                type="button"
+                onClick={() => downloadOrderIcs(order)}
+                className="flex h-12 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-input bg-background px-[18px] text-sm font-medium whitespace-nowrap hover:border-foreground @xl:gap-2"
+              >
+                <CalendarPlusIcon className="size-4" aria-hidden />
+                <span className="@xl:hidden">Calendario</span>
+                <span className="hidden @xl:inline">Agregar al calendario</span>
+              </button>
+            </div>
+            {pdf.failed && (
+              <p role="alert" className="text-sm font-medium text-destructive">
+                No pudimos generar el PDF. Inténtalo de nuevo.
+              </p>
+            )}
           </div>
         </div>
       </div>
