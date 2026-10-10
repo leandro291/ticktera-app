@@ -207,6 +207,13 @@ Reglas: hay un único `super_admin`; el panel no lo asigna, no lo modifica ni lo
 
 Stripe `PaymentIntent` con **Payment Element embebido**, solo `card`, moneda `PEN` (el artifact tiene el formulario de tarjeta dentro de la página). Yape y PagoEfectivo del artifact quedan fuera de alcance. **Solo cobra la plataforma:** sin Connect, comisiones ni payouts.
 
+### Cuenta de Stripe (verificado el 2026-10-09)
+
+- **Perú no es país soportado** para abrir una cuenta de Stripe (stripe.com/global). La cuenta de la plataforma es de **EE.UU.**: en producción, una empresa en EE.UU. (LLC, por ejemplo vía Stripe Atlas), a crear antes del lanzamiento. En desarrollo se usa el sandbox de EE.UU. ya creado.
+- **`PEN` es moneda de presentación** para cuentas de EE.UU. (`country_specs/US`): el cliente ve y paga en soles. Probado en el sandbox con Visa y Amex (`succeeded`).
+- **No se liquida en `PEN`**: Stripe convierte a USD al acreditar. La BD guarda montos en céntimos de `PEN` (lo que paga el cliente); el neto en USD solo vive en Stripe.
+- **Comisión estándar de EE.UU.** con tarjeta peruana: 2,9 % + USD 0,30, + 1,5 % por tarjeta internacional, + 1 % por conversión (≈ 5,4 % + USD 0,30). El mínimo por cobro lo fija la moneda de liquidación (USD).
+
 ### Flujo
 
 1. **Crear orden** (Server Action, en una transacción):
@@ -260,7 +267,7 @@ Stripe CLI reenvía los webhooks a localhost. Cloud Scheduler no existe en local
 
 ## Riesgos abiertos
 
-- **Stripe y `PEN` desde Perú (NO confirmado).** Verificar antes de producción si Stripe permite abrir la cuenta de la plataforma y cobrar en `PEN` desde Perú. Puede obligar a usar otra jurisdicción para la cuenta. Hasta confirmarlo, este documento no da por hecho que sea posible ni imposible.
+- **Empresa en EE.UU. para la cuenta live de Stripe.** Resuelto el riesgo técnico (ver §3, "Cuenta de Stripe"); queda pendiente crear la entidad y activar la cuenta live antes del despliegue.
 - **Proveedor de emails pendiente** (A6): se define en la spec de confirmaciones.
 - **Nombre de marca:** el artifact dice "Ticketera" y el repo "Ticktera". Definir el nombre oficial antes de publicar copy.
 - **Pantalla de consentimiento de Google (producción):** necesita nombre de marca, dominio y política de privacidad definidos antes de pasar a *In production*. Depende del dominio final y del nombre oficial.

@@ -1,8 +1,8 @@
 # CRUD de eventos del organizador (con moderación de admin)
 
 - Module: organizer
-- Status: draft
-- Approved by: -
+- Status: approved
+- Approved by: lenadro291 (2026-10-09)
 - Mode: SDD
 
 ## Goal
@@ -485,7 +485,7 @@ Nota Fase 9: cierra con `npm run build` y los `grep` de AC32.
 - H5 (opcional, antes de migrar el catálogo público) agregar `images.remotePatterns` para `*.public.blob.vercel-storage.com` en `next.config.ts`; hoy las portadas se muestran `unoptimized`.
 
 ## Open questions
-Ninguna bloquea; todas tienen default (el usuario valida):
+Resueltas por el usuario (2026-10-09): se aceptan los defaults de Q1–Q5 y Q7; Q6 se decide en la tarea de despliegue (en local el token va en `.env.local`). Texto original:
 - Q1 (D11) Un borrador exige título, categoría, fecha, hora, lugar y ciudad (por las columnas NOT NULL; cero migraciones). Alternativa: hacer nullable `starts_at`/`venue_name`/`city` con migración Drizzle y manejar `null` en listados. Default: la primera.
 - Q2 (D5) El **nombre** de un tipo con ventas también se congela (no estaba en el requerimiento; `order_items` no guarda snapshot del nombre). Default: congelado.
 - Q3 (D6) Cambiar fecha/lugar con ventas: permitido con confirmación explícita y log. Alternativa: bloquearlo (obliga a cancelar, y no hay reembolsos). Default: permitido con ack.
