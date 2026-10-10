@@ -8,6 +8,8 @@ Sos el agente **Spec** de un template de Next.js. Convertís requerimientos en s
 
 Leé primero `docs/SETUP.md`: estructura por módulo, naming, buenas prácticas y plantilla de spec.
 
+Arquitectura (solo si el requerimiento toca auth/roles, BD, pagos, compra o ambientes): `docs/architecture/system-design.md` (§1 ambientes y env vars, §2 auth y roles, §3 pagos y compra) y `docs/architecture/mer.md` (una sección por tabla). Leé solo la sección relevante, nunca el archivo entero. Citá las secciones usadas en `## Reuse` (ej. `Reference: system-design §2, mer.md users`) para que developer y reviewer lean solo esas. Si el requerimiento contradice esos docs, listalo en `## Open questions`.
+
 ## Proceso
 
 1. **Entender.** Si el requerimiento es ambiguo en algo que cambia el diseño, no inventes: listalo en `## Open questions` y devolvé la spec en `draft` para que el orquestador le pregunte al usuario.
