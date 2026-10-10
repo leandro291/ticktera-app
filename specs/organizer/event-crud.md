@@ -89,7 +89,7 @@ Permisos y autorización
 Máquina de estados y publicación
 - AC6: `allowedActions(status, { owner, moderator })` implementa D2 y está testeada para los 4 estados × {dueño, moderador, ambos, ninguno}: `suspended` no ofrece nada al dueño; `cancelled` solo `delete` al dueño; el moderador nunca recibe `edit`, `delete` ni acciones sobre `draft`.
 - AC7: `checkPublishable` implementa D4 (título, categoría, lugar, ciudad, fecha futura, ≥ 1 tipo, capacidad total ≥ 1) y devuelve todos los problemas, cada uno con su campo. Publicar con problemas → `not-publishable` con `fieldErrors` y nada cambia.
-- AC8: Publicar fija `status = 'published'` y `published_at = now()`; despublicar (`published → draft`) limpia `published_at` y exige **cero** ventas comprometidas (paid o pending vigente) → si no, `has-sales` ("cancélalo en lugar de despublicarlo"). Cancelar y moderar son compare-and-set sobre `status` bajo lock de fila: la transición inválida (ya cambió) → `invalid-transition`.
+- AC8: Publicar fija `status = 'published'` y `published_at = now()`; despublicar (`published → draft`) **conserva** `published_at` (marca que el evento ya se publicó y su slug es inmutable, D16; volver a publicar lo actualiza) y exige **cero** ventas comprometidas (paid o pending vigente) → si no, `has-sales` ("cancélalo en lugar de despublicarlo"). Cancelar y moderar son compare-and-set sobre `status` bajo lock de fila: la transición inválida (ya cambió) → `invalid-transition`.
 - AC9: Un evento `suspended` o `cancelled` no aparece en `GET /api/events?scope=published` (ya filtra por `published`) y la regla del checkout queda escrita en system-design §3 (D19).
 
 Guardar (crear / editar)
@@ -420,18 +420,18 @@ Verificación manual (humano, tras los pasos manuales y con un organizador del s
 ### Phase 3 — Dependencias, schemas y errores de campo
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: `npm i @vercel/blob`; `BLOB_READ_WRITE_TOKEN` opcional en `lib/env.ts` y `.env.example`; `npx shadcn@latest add dropdown-menu` | package.json, package-lock.json, lib/env.ts, .env.example, components/ui/dropdown-menu.tsx | - | A | AC20 | todo |
-| T2 | Schemas Zod (guardar, transición, moderación, borrado) con test | modules/event/schemas/event-save-schema.ts, modules/event/schemas/event-save-schema.test.ts | Phase 2 | B | AC3, AC10 | todo |
-| T3 | Mapeo de issues a errores de campo con test | modules/event/lib/field-errors.ts, modules/event/lib/field-errors.test.ts | Phase 2 | B | AC24 | todo |
+| T1 | setup: `npm i @vercel/blob`; `BLOB_READ_WRITE_TOKEN` opcional en `lib/env.ts` y `.env.example`; `npx shadcn@latest add dropdown-menu` | package.json, package-lock.json, lib/env.ts, .env.example, components/ui/dropdown-menu.tsx | - | A | AC20 | done |
+| T2 | Schemas Zod (guardar, transición, moderación, borrado) con test | modules/event/schemas/event-save-schema.ts, modules/event/schemas/event-save-schema.test.ts | Phase 2 | B | AC3, AC10 | done |
+| T3 | Mapeo de issues a errores de campo con test | modules/event/lib/field-errors.ts, modules/event/lib/field-errors.test.ts | Phase 2 | B | AC24 | done |
 
 ### Phase 4 — Servicios de servidor y portada (BD/Blob; nadie los consume todavía)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Validación pura de portada con test | modules/event/lib/cover-image.ts, modules/event/lib/cover-image.test.ts | Phase 3 | A | AC20 | todo |
-| T2 | setup de servidor: `EventError`, log de auditoría, `lockAndLoadTiers` (lock + agregado de ventas) | modules/event/services/event-error.ts, modules/event/services/event-audit.ts, modules/event/services/event-sales.ts | Phase 3 | A | AC14, AC15, AC29 | todo |
-| T3 | `saveEvent` (crear/actualizar/publicar, slug, tipos, congelamiento, optimista) | modules/event/services/event-save-service.ts | T2 | B | AC4, AC5, AC8, AC12, AC13, AC14, AC15, AC16, AC17 | todo |
-| T4 | `transitionEvent`, `moderateEvent`, `deleteEvent` (lock, compare-and-set, `23503`) | modules/event/services/event-status-service.ts | T2 | B | AC4, AC8, AC18, AC19 | todo |
-| T5 | `getEventForEdit`, `listCategories`, `setEventCover`, `removeEventCover` | modules/event/services/event-read-service.ts, modules/event/services/event-cover-service.ts | T1, T2 | B | AC4, AC20, AC23 | todo |
+| T1 | Validación pura de portada con test | modules/event/lib/cover-image.ts, modules/event/lib/cover-image.test.ts | Phase 3 | A | AC20 | done |
+| T2 | setup de servidor: `EventError`, log de auditoría, `lockAndLoadTiers` (lock + agregado de ventas) | modules/event/services/event-error.ts, modules/event/services/event-audit.ts, modules/event/services/event-sales.ts | Phase 3 | A | AC14, AC15, AC29 | done |
+| T3 | `saveEvent` (crear/actualizar/publicar, slug, tipos, congelamiento, optimista) | modules/event/services/event-save-service.ts | T2 | B | AC4, AC5, AC8, AC12, AC13, AC14, AC15, AC16, AC17 | done |
+| T4 | `transitionEvent`, `moderateEvent`, `deleteEvent` (lock, compare-and-set, `23503`) | modules/event/services/event-status-service.ts | T2 | B | AC4, AC8, AC18, AC19 | done |
+| T5 | `getEventForEdit`, `listCategories`, `setEventCover`, `removeEventCover` | modules/event/services/event-read-service.ts, modules/event/services/event-cover-service.ts | T1, T2 | B | AC4, AC20, AC23 | done |
 
 ### Phase 5 — Acciones, route handler de portada, hook y entradas (la UI vieja sigue funcionando)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
@@ -485,7 +485,9 @@ Nota Fase 9: cierra con `npm run build` y los `grep` de AC32.
 - H5 (opcional, antes de migrar el catálogo público) agregar `images.remotePatterns` para `*.public.blob.vercel-storage.com` en `next.config.ts`; hoy las portadas se muestran `unoptimized`.
 
 ## Open questions
-Resueltas por el usuario (2026-10-09): se aceptan los defaults de Q1–Q5 y Q7; Q6 se decide en la tarea de despliegue (en local el token va en `.env.local`). Texto original:
+Resueltas por el usuario (2026-10-09): se aceptan los defaults de Q1–Q5 y Q7; Q6 se decide en la tarea de despliegue (en local el token va en `.env.local`).
+Corrección aprobada por el usuario (2026-10-09, Fase 4): AC8 decía que despublicar limpia `published_at`, lo que contradecía D16 (el slug se regeneraría tras despublicar). Ahora despublicar conserva `published_at`.
+Texto original:
 - Q1 (D11) Un borrador exige título, categoría, fecha, hora, lugar y ciudad (por las columnas NOT NULL; cero migraciones). Alternativa: hacer nullable `starts_at`/`venue_name`/`city` con migración Drizzle y manejar `null` en listados. Default: la primera.
 - Q2 (D5) El **nombre** de un tipo con ventas también se congela (no estaba en el requerimiento; `order_items` no guarda snapshot del nombre). Default: congelado.
 - Q3 (D6) Cambiar fecha/lugar con ventas: permitido con confirmación explícita y log. Alternativa: bloquearlo (obliga a cancelar, y no hay reembolsos). Default: permitido con ack.
