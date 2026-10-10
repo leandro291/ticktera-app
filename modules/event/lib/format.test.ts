@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDateLong, formatDateShort, formatPrice, getDateBadge } from "./format";
+import { formatDateLong, formatDateShort, formatPrice, formatPriceCents, getDateBadge, isoToLimaDate } from "./format";
 
 describe("formatPrice", () => {
   it("AC1: formats soles with the design symbol and es-PE grouping", () => {
@@ -26,5 +26,21 @@ describe("dates", () => {
   it("AC1: calendar badge uses zero-padded day and uppercase month", () => {
     expect(getDateBadge("2026-10-05")).toEqual({ day: "05", month: "OCT" });
     expect(getDateBadge("2026-12-31")).toEqual({ day: "31", month: "DIC" });
+  });
+});
+
+describe("formatPriceCents", () => {
+  it("AC11: converts cents to soles", () => {
+    expect(formatPriceCents(0)).toBe("S/ 0");
+    expect(formatPriceCents(12345)).toBe("S/ 123");
+    expect(formatPriceCents(123456789012)).toBe("S/ 1,234,567,890");
+  });
+});
+
+describe("isoToLimaDate", () => {
+  it("AC11: returns the Lima calendar day, not the UTC one", () => {
+    expect(isoToLimaDate("2026-11-14T21:00:00-05:00")).toBe("2026-11-14");
+    expect(isoToLimaDate("2026-11-15T02:00:00Z")).toBe("2026-11-14");
+    expect(isoToLimaDate("2026-11-15T05:00:00Z")).toBe("2026-11-15");
   });
 });

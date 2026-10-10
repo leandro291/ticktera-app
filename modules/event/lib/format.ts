@@ -14,6 +14,19 @@ export function formatPrice(amount: number, currency: Currency = "PEN"): string 
   return `${CURRENCY_SYMBOL[currency]} ${numberFormat.format(amount)}`;
 }
 
+/** Céntimos → soles (D6). */
+export function formatPriceCents(cents: number): string {
+  return formatPrice(cents / 100);
+}
+
+// en-CA formats as yyyy-mm-dd; Lima has no DST (D7).
+const limaDate = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima" });
+
+/** ISO con zona → "yyyy-mm-dd" en hora de Lima. */
+export function isoToLimaDate(iso: string): string {
+  return limaDate.format(new Date(iso));
+}
+
 const toDate = (isoDate: string) => new Date(`${isoDate}T00:00:00Z`);
 
 const part = (isoDate: string, options: Intl.DateTimeFormatOptions) =>

@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
+import { DatePicker } from "@/components/shared/date-picker";
 import { PageLoading } from "@/components/shared/page-loading";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -63,11 +64,11 @@ function EventFormContent({ draftId }: { draftId?: string }) {
     <main className="flex w-full max-w-[1176px] flex-col gap-4 px-4 pt-4 lg:gap-6 lg:px-12 lg:pt-8 lg:pb-12">
       <div className="flex flex-col gap-1 lg:gap-2.5">
         <Link
-          href="/organizer#my-events"
+          href="/organizer"
           className="flex h-10 w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground lg:h-8"
         >
           <ArrowLeftIcon className="size-4" aria-hidden />
-          Mis eventos
+          Eventos
         </Link>
         <h1 className="text-[26px] leading-[1.15] font-bold tracking-tight lg:text-[32px]">{editing ? "Editar borrador" : "Crear evento"}</h1>
       </div>
@@ -128,7 +129,7 @@ function EventFormContent({ draftId }: { draftId?: string }) {
             <div className="grid grid-cols-2 gap-3 lg:gap-x-5 lg:gap-y-[18px]">
               <label className={label}>
                 Fecha
-                <Input type="date" name="date" required value={draft.date} onChange={(e) => set({ date: e.target.value })} className={cn(field, "px-3 lg:px-4")} />
+                <DatePicker name="date" required value={draft.date} onChange={(date) => set({ date })} className={cn(field, "px-3 lg:px-4")} />
               </label>
               <label className={label}>
                 Hora de inicio
