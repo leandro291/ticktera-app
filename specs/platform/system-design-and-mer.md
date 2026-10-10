@@ -23,7 +23,7 @@ Documentar la arquitectura de Ticktera (ambientes local y producción, autentica
 | # | Decisión |
 | - | -------- |
 | D1 | Local: Neon + `localhost`. Producción: GCP, Cloud Run + Cloud SQL Postgres. |
-| D2 | Auth con Clerk (email/password y Google). Pagos con Stripe. Google Maps solo en producción. |
+| D2 | Auth con Clerk (email/password y Google como social connection; Google solo vía Clerk, sin cambios de schema). Pagos con Stripe. Google Maps solo en producción. |
 | D3 | Roles: `super_admin`, `admin`, `organizer`, `customer`. Usuario = organizador (sin organizaciones ni equipos). |
 | D4 | Solo Stripe con tarjeta (`PEN`). Yape y PagoEfectivo del artifact quedan fuera. |
 | D5 | Solo cobra la plataforma: sin Stripe Connect, comisiones ni payouts en el modelo. |

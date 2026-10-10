@@ -1,6 +1,9 @@
+import { ClerkProvider } from "@clerk/nextjs";
+import { shadcn } from "@clerk/ui/themes";
 import type { Metadata } from "next";
 import { Poppins } from "next/font/google";
 import { PersistedStores } from "@/components/shared/persisted-stores";
+import { QueryProvider } from "@/components/shared/query-provider";
 import "./globals.css";
 
 const poppins = Poppins({
@@ -22,8 +25,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${poppins.variable} h-full`}>
       <body className="flex min-h-full flex-col">
-        <PersistedStores />
-        {children}
+        <ClerkProvider appearance={{ theme: shadcn }}>
+          <QueryProvider>
+            <PersistedStores />
+            {children}
+          </QueryProvider>
+        </ClerkProvider>
       </body>
     </html>
   );

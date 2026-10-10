@@ -174,7 +174,7 @@ export function EventSearch({ events, initialQuery = "", initialFilters }: Event
             </div>
             <div className="hidden shrink-0 items-center gap-2.5 lg:flex">
               <span className="text-sm text-muted-foreground">Ordenar por</span>
-              <div className="flex gap-1 rounded-[14px] border border-border bg-background p-1">
+              <div className="flex h-11 gap-1 rounded-xl border border-border bg-background p-1">
                 {(
                   [
                     ["date", "Fecha"],
@@ -187,7 +187,7 @@ export function EventSearch({ events, initialQuery = "", initialFilters }: Event
                     aria-pressed={sort === key}
                     onClick={() => setSort(key)}
                     className={cn(
-                      "h-10 rounded-[10px] px-4 text-sm font-semibold",
+                      "h-full rounded-lg px-4 text-sm font-semibold",
                       sort === key ? "bg-strong text-white" : "text-foreground hover:bg-muted",
                     )}
                   >

@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { ORGANIZER_EVENTS } from "../data/organizer-events";
-import type { TierDraft } from "../types/organizer-event";
+import type { OrganizerEvent, TierDraft } from "../types/organizer-event";
 import { buildOrganizerEvent, createEventDraft, draftFromEvent, getMinPrice, getTotalCapacity, parseAmount } from "./event-draft";
+
+const SAVED_EVENT: OrganizerEvent = {
+  id: "org-001",
+  catalogId: "evt-002",
+  title: "Festival Vive Latino Lima",
+  category: "Festivales",
+  description: "Dos escenarios, más de 20 artistas y zona de comida en la Costa Verde.",
+  image: "/images/events/vive-latino-lima.jpg",
+  date: "2026-10-05",
+  startTime: "14:00",
+  venue: "Costa Verde",
+  city: "Lima",
+  status: "published",
+  tiers: [
+    { id: "org-001-general", name: "General", price: 120, capacity: 6500, sold: 6120 },
+    { id: "org-001-vip", name: "VIP", price: 280, capacity: 1500, sold: 1300 },
+  ],
+};
 
 const tier = (price: string, quantity: string): TierDraft => ({ id: `t-${price}-${quantity}`, name: "General", price, quantity });
 
@@ -37,7 +54,7 @@ describe("getMinPrice", () => {
 
 describe("buildOrganizerEvent / draftFromEvent", () => {
   it("AC13: round-trips a saved event and keeps sold counts and catalog id", () => {
-    const saved = ORGANIZER_EVENTS[0];
+    const saved = SAVED_EVENT;
     const rebuilt = buildOrganizerEvent(draftFromEvent(saved), "published", saved.id, saved);
     expect(rebuilt).toEqual(saved);
   });

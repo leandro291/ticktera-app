@@ -1,6 +1,6 @@
+import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { AccountMenu } from "@/modules/auth";
 import { Logo } from "./logo";
 import { MobileMenu } from "./mobile-menu";
 import { NavLink } from "./nav-link";
@@ -19,7 +19,13 @@ export function SiteHeader({ className }: { className?: string }) {
           ))}
         </nav>
         <div className="flex items-center gap-1 lg:gap-2">
-          <AccountMenu />
+          <Show when="signed-out">
+            <SignInButton />
+            <SignUpButton />
+          </Show>
+          <Show when="signed-in">
+            <UserButton />
+          </Show>
           <Link
             href="/organizer"
             className="hidden h-11 items-center rounded-xl border-[1.5px] border-input px-[18px] text-[15px] font-semibold text-foreground hover:border-foreground lg:flex"

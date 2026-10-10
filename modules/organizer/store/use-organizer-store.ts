@@ -1,11 +1,10 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { persistOptions } from "@/lib/persist";
-import { ORGANIZER_EVENTS } from "../data/organizer-events";
 import type { OrganizerEvent } from "../types/organizer-event";
 
 interface OrganizerState {
-  /** The organizer's events, newest first (saved in localStorage; starts with the mock data). */
+  /** The organizer's events, newest first (local drafts saved in localStorage; starts empty). */
   events: OrganizerEvent[];
   /** Inserts a new event on top or replaces the one with the same id. */
   saveEvent: (event: OrganizerEvent) => void;
@@ -14,7 +13,7 @@ interface OrganizerState {
 export const useOrganizerStore = create<OrganizerState>()(
   persist(
     (set) => ({
-      events: ORGANIZER_EVENTS,
+      events: [],
       saveEvent: (event) =>
         set((state) =>
           state.events.some((e) => e.id === event.id)

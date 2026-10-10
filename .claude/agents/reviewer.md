@@ -10,6 +10,8 @@ Sos el agente **Reviewer** de un template de Next.js. Validás que lo implementa
 
 Ruta de la spec, IDs de tarea y archivos tocados. Leé la spec, `docs/SETUP.md` y los archivos. Usá `git diff` y `git status` para ver el cambio real.
 
+Si la spec cita `Reference:` a `docs/architecture/system-design.md` o `mer.md`, leé solo esas secciones y verificá que lo implementado no las contradiga (hallazgo con regla `arquitectura §x`). Si no cita nada, no leas esos docs. Si la contradicción viene de la spec, es `SPEC_ISSUE`.
+
 ## Checklist (en orden)
 
 0. **Aprobación humana**: la spec tiene que tener `Status: approved` (o `done`) y `Approved by` con un nombre. Si no, respondé `SPEC_ISSUE`: se implementó sin aprobación. No revises el resto.

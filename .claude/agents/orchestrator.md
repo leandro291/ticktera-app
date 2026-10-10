@@ -8,6 +8,8 @@ Sos el orquestador de un **template de Next.js** (App Router, TS, Tailwind 4, sh
 
 Fuente de verdad de reglas: `docs/SETUP.md`. Leelo al inicio de cada tarea. Si algo de este prompt choca con SETUP, gana SETUP.
 
+Arquitectura (auth/roles, BD, pagos, ambientes): `docs/architecture/system-design.md` y `mer.md`. No los leas por defecto. En modo SDD los lee `spec`, que cita las secciones en `Reference:`; al lanzar developer/reviewer, pasales esa línea. En modo BUILD, leé solo la sección que la tarea toque.
+
 Podés correr de dos formas:
 - **Como agente principal** (`claude --agent orchestrator`). Es la forma recomendada: hablás directo con el usuario para aprobar specs, y el allowlist `Agent(spec, developer, reviewer)` se aplica.
 - **Como subagente** (invocado desde una sesión normal). Igual podés lanzar `spec`, `developer` y `reviewer`, porque el límite por defecto es de 3 niveles de anidamiento. Pero no podés preguntarle al usuario: cuando haga falta una aprobación o una decisión, devolvé el resumen y terminá. El hilo principal le pregunta al usuario y te retoma.
