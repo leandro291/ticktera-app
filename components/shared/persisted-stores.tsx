@@ -2,11 +2,10 @@
 
 import { useEffect } from "react";
 import { STORAGE_PREFIX } from "@/lib/persist";
-import { useSessionStore } from "@/modules/auth";
 import { useOrganizerStore } from "@/modules/organizer";
 import { useCartStore, useOrderStore } from "@/modules/purchase";
 
-const STORES = [useSessionStore, useCartStore, useOrderStore, useOrganizerStore];
+const STORES = [useCartStore, useOrderStore, useOrganizerStore];
 
 /**
  * Loads every persisted store from localStorage after mount (so the server HTML and the first client render match)
