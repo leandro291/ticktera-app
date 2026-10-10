@@ -1,4 +1,5 @@
 import { categories, events, ticketTypes } from "../schema";
+import { slugify } from "../../modules/event/lib/event-slug";
 import { getEventById, getEvents } from "../../modules/event/services/event-service";
 import { EVENT_CATEGORIES } from "../../modules/event/types/event";
 import { MAX_TICKETS_PER_ZONE } from "../../modules/purchase/data/venues";
@@ -11,13 +12,7 @@ type TicketTypeRow = Omit<typeof ticketTypes.$inferInsert, "eventId"> & { eventS
 
 export const GENERAL_ADMISSION_CAPACITY = 1000;
 
-export const slugify = (s: string) =>
-  s
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+export { slugify };
 
 // The mock dates are fixed, so some may already be gone: those move forward whole years until their (Lima) day is
 // strictly after today. A fresh seed must never publish an event that already happened or that starts today.

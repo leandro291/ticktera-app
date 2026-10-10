@@ -406,16 +406,16 @@ Verificación manual (humano, tras los pasos manuales y con un organizador del s
 ### Phase 1 — Permisos, helper de errores de BD, límites, estados y tipos (puro; la app no cambia)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: `events:manage-own` a admin/super_admin y `events:suspend` → `events:moderate` (+ matriz del test); mover `db-errors` a `lib/` (+ `isUniqueViolation`, `pgConstraint`) y actualizar el import de `users` | modules/auth/lib/permissions.ts, modules/auth/lib/permissions.test.ts, lib/db-errors.ts, lib/db-errors.test.ts, modules/users/lib/db-errors.ts, modules/users/lib/db-errors.test.ts, modules/users/services/user-admin-service.ts | - | A | AC1 | todo |
-| T2 | Límites, máquina de estados con test y tipos de escritura | modules/event/lib/event-limits.ts, modules/event/lib/event-transitions.ts, modules/event/lib/event-transitions.test.ts, modules/event/types/event-write.ts | - | B | AC6 | todo |
+| T1 | setup: `events:manage-own` a admin/super_admin y `events:suspend` → `events:moderate` (+ matriz del test); mover `db-errors` a `lib/` (+ `isUniqueViolation`, `pgConstraint`) y actualizar el import de `users` | modules/auth/lib/permissions.ts, modules/auth/lib/permissions.test.ts, lib/db-errors.ts, lib/db-errors.test.ts, modules/users/lib/db-errors.ts, modules/users/lib/db-errors.test.ts, modules/users/services/user-admin-service.ts | - | A | AC1 | done |
+| T2 | Límites, máquina de estados con test y tipos de escritura | modules/event/lib/event-limits.ts, modules/event/lib/event-transitions.ts, modules/event/lib/event-transitions.test.ts, modules/event/types/event-write.ts | - | B | AC6 | done |
 
 ### Phase 2 — Reglas puras de negocio (sin BD, sin UI)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Hora de Lima: `limaDateTimeToDate` e `isoToLimaTime`, con tests | modules/event/lib/lima-datetime.ts, modules/event/lib/lima-datetime.test.ts, modules/event/lib/format.ts, modules/event/lib/format.test.ts | Phase 1 | A | AC11 | todo |
-| T2 | Reglas de publicación con test | modules/event/lib/event-publish.ts, modules/event/lib/event-publish.test.ts | Phase 1 | A | AC7 | todo |
-| T3 | Congelamiento con ventas con test | modules/event/lib/event-freeze.ts, modules/event/lib/event-freeze.test.ts | Phase 1 | A | AC5, AC15, AC16 | todo |
-| T4 | Slug (`slugify` movido, `slugBase`, `uniqueSlug`) con test; el seed importa `slugify` | modules/event/lib/event-slug.ts, modules/event/lib/event-slug.test.ts, db/seed/mock-to-rows.ts | Phase 1 | A | AC13 | todo |
+| T1 | Hora de Lima: `limaDateTimeToDate` e `isoToLimaTime`, con tests | modules/event/lib/lima-datetime.ts, modules/event/lib/lima-datetime.test.ts, modules/event/lib/format.ts, modules/event/lib/format.test.ts | Phase 1 | A | AC11 | done |
+| T2 | Reglas de publicación con test | modules/event/lib/event-publish.ts, modules/event/lib/event-publish.test.ts | Phase 1 | A | AC7 | done |
+| T3 | Congelamiento con ventas con test | modules/event/lib/event-freeze.ts, modules/event/lib/event-freeze.test.ts | Phase 1 | A | AC5, AC15, AC16 | done |
+| T4 | Slug (`slugify` movido, `slugBase`, `uniqueSlug`) con test; el seed importa `slugify` | modules/event/lib/event-slug.ts, modules/event/lib/event-slug.test.ts, db/seed/mock-to-rows.ts | Phase 1 | A | AC13 | done |
 
 ### Phase 3 — Dependencias, schemas y errores de campo
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
