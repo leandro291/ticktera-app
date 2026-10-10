@@ -142,13 +142,13 @@ Todas las tablas tienen `id uuid` PK NOT NULL (`defaultRandom()`), salvo `stripe
 
 ### `users`
 
-Cuenta local espejo del usuario de Clerk. La usan login/registro y todas las pantallas que muestran datos del comprador u organizador.
+Cuenta local espejo del usuario de Clerk. La usan login/registro y todas las pantallas que muestran datos del comprador u organizador. Sirve igual para quien entra con email/password que con Google: la identidad (contraseña, `sub` de Google, tokens OAuth) vive en Clerk y no se duplica acá. No hay tabla de cuentas sociales ni de sesiones.
 
 | Columna | Tipo | Null | Default | Notas |
 | ------- | ---- | ---- | ------- | ----- |
-| `clerk_user_id` | text | no | - | Único. Enlaza con Clerk. |
-| `email` | text | no | - | Único. |
-| `full_name` | text | no | - | Nombre del checkout y de "Mis entradas". |
+| `clerk_user_id` | text | no | - | Único. Enlaza con Clerk (id de Clerk, no el `sub` de Google). |
+| `email` | text | no | - | Único. Email primario de Clerk; con Google siempre llega verificado. Un mismo email por Google y password es un solo usuario. |
+| `full_name` | text | no | - | Nombre del checkout y de "Mis entradas". Con Google: `first_name` + `last_name`; si faltan, parte local del email. |
 | `phone` | text | sí | - | Dato de contacto del checkout. |
 | `document_type` | `document_type` | sí | - | DNI, CE o pasaporte del checkout. |
 | `document_number` | text | sí | - | Número del documento. |
@@ -287,14 +287,20 @@ PK = `id`.
 
 - **Disponibilidad** de un tipo = `capacity` − vendidas − pendientes vigentes. Vendidas = suma de `order_items.quantity` de órdenes `paid`. Pendientes vigentes = suma de órdenes `pending` con `expires_at` en el futuro.
 - **"Agotado" y "Últimas entradas"** se calculan al consultar a partir de la disponibilidad. Nunca se guardan.
-- **KPIs del dashboard de organizador** (vendidas, ingresos, publicados) son consultas sobre estas tablas. No hay tablas de resumen.
+- **KPIs del dashboard de organizador** (vendidas, ingresos, publicados) son consultas sobre estas tablas. No hay tablas de resumen. Se calculan sobre los eventos del alcance, sin importar el estado del evento:
+  - **Entradas vendidas** = suma de `order_items.quantity` de órdenes `paid`.
+  - **Ingresos** = suma de `order_items.quantity * unit_price_cents` de órdenes `paid`, en céntimos de PEN (el producto se castea a `bigint` en SQL: `int4 * int4` desborda). Las órdenes `pending`, `expired` y `refunded` aportan 0; como `refunded` es la orden entera (no hay reembolsos parciales), el ingreso ya es neto de reembolsos.
+  - **Capacidad** = suma de `ticket_types.capacity`.
+  - **Eventos publicados** = eventos con `status = 'published'`. Un evento `cancelled` o `suspended` con ventas `paid` suma entradas e ingresos, pero no cuenta como publicado.
+  - Un evento sin tipos de entrada o sin ventas da 0 en todo (capacidad incluida).
 - **"Desde S/ X"** = mínimo de `ticket_types.price_cents` del evento.
-- **Usuario borrado en Clerk**: la fila de `users` queda `suspended`, no se borra. Sus órdenes se conservan.
+- **Usuario borrado en Clerk** (webhook `user.deleted`): la fila de `users` queda `suspended`, no se borra. Sus órdenes se conservan. El borrado explícito desde el panel de super admin es distinto: elimina la fila (y el usuario de Clerk) solo si no tiene eventos ni órdenes asociados (FK `events.organizer_id` y `orders.user_id`, sin cascade); si los tiene, falla y la fila queda como estaba.
 
 ## Supuestos
 
 - **A7**: `categories` es tabla y no enum. El artifact tiene 8 categorías, la landing del repo 6, y el Super admin debe poder editarlas.
 - **A8**: `holder_name` por defecto = comprador.
+- **A10**: login con Google no agrega columnas ni tablas. La foto de perfil se lee de Clerk (`user.imageUrl`), sin `avatar_url` en `users`; se agrega solo si una pantalla lo necesita fuera de sesión (ej. foto del organizador en el detalle de evento).
 - **A9**: sin `audit_logs`, escaneo en puerta ni tabla de emails (ninguna pantalla los usa).
 
 ## Fuera del modelo por decisión
