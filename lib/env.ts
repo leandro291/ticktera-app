@@ -10,6 +10,8 @@ const envSchema = z.object({
     (v) => (v === "" ? undefined : v),
     z.email().transform((e) => e.toLowerCase()).optional(),
   ),
+  // Optional so `next build` never breaks: without it only cover uploads answer 503 (event-crud D15).
+  BLOB_READ_WRITE_TOKEN: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
 })
 
 const parsed = envSchema.safeParse(process.env)
