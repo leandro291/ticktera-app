@@ -1,6 +1,6 @@
 # SETUP
 
-Reglas de estructura, buenas prácticas y metodología de trabajo del proyecto. Aplican a todo el código nuevo, sea humano o generado por un agente.
+Reglas de estructura y buenas prácticas del proyecto. Aplican a todo el código nuevo.
 
 Stack: Next.js (App Router), React, TypeScript, Tailwind, shadcn/ui, TanStack Query/Table, Zustand, Zod, Axios.
 
@@ -66,7 +66,6 @@ hooks/                        # hooks reutilizables entre módulos
 lib/                          # utilidades transversales (cn, axios instance)
 db/                           # schema Drizzle (transversal: FK cruzan dominios) + drizzle.config.ts en la raíz
 docs/                         # documentación (SETUP, design system)
-specs/                        # specs SDD: specs/<module>/<feature>.md
 ```
 
 ### Ejemplo de uso
@@ -149,74 +148,8 @@ Al empezar cualquier componente de UI:
 
 ---
 
-## 3. Metodología: SDD (Spec Driven Development)
-
-En SDD ningún cambio se implementa sin una **spec aprobada por un humano** antes. La spec es la fuente de verdad: el código y los tests salen de ella.
-
-> **Bloqueante:** el agente `developer` no arranca si la spec no tiene `Status: approved` y `Approved by: <nombre> (<fecha>)`. Esos campos los completa el orquestador solo después de que un humano apruebe explícitamente. Si la spec cambia criterios, contratos o plan, vuelve a `draft` y necesita otra aprobación.
-
-### SDD o BUILD
-
-El orquestador clasifica cada tarea (criterios completos en `.claude/agents/orchestrator.md`):
-
-- **BUILD** (directo, sin spec): 1–3 archivos, sin módulo nuevo ni contratos nuevos. Por ejemplo fixes puntuales, estilos, config o dependencias.
-- **SDD**: features, módulos nuevos, cambios en varios módulos, contratos nuevos o lógica que pide tests.
-
-Las reglas de las secciones 1 y 2 aplican en los dos modos.
-
-Uso recomendado: `claude --agent orchestrator`, así el orquestador habla directo con vos para aprobar specs. También se puede invocar como subagente desde una sesión normal: delega igual, pero devuelve el control al hilo principal para cada aprobación.
-
-### Flujo
-
-```
-Requerimiento → Spec → Desarrollo (+ tests) → Review → Cierre
-```
-
-1. Se recibe el requerimiento.
-2. **Spec** lo convierte en una spec escrita y se valida.
-3. **Developer** implementa según la spec.
-4. **Reviewer** verifica código contra la spec y las reglas de este documento.
-5. Si el reviewer rechaza, vuelve a Developer, con un máximo de 3 vueltas antes de escalar al usuario. Si aprueba, se cierra.
-
-**Planes alcanzables:** la spec se divide en fases que se verifican solas. Cada fase tiene como máximo ~5 tareas y ~10 archivos. Por sesión se hacen 1–2 fases.
-
-**Paralelo sin conflictos:** cada tarea declara los archivos que le pertenecen (`Owns`). Las tareas de una misma fase no comparten archivos. Los archivos compartidos y las instalaciones van en una tarea de setup previa.
-
-Las specs se guardan en `specs/<module>/<feature>.md`.
-
-### Agentes
-
-| Agente           | Responsabilidad                                                                                                                                 | No hace                          |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------- |
-| **Orquestador**  | Recibe el requerimiento, coordina el flujo, delega a los otros agentes en orden y consolida el resultado. Decide cuándo algo está terminado.   | Escribir specs ni código.        |
-| **Spec**         | Convierte el requerimiento en spec: objetivo, alcance, criterios de aceptación, módulo afectado, contratos (tipos/schemas), casos borde, tests esperados. Revisa el código existente para no duplicar. | Implementar.                     |
-| **Developer**    | Implementa exactamente lo que dice la spec siguiendo la sección 1 y 2. Escribe los unit tests que la spec pida.                                 | Ampliar el alcance de la spec.   |
-| **Reviewer**     | Valida código y tests contra la spec y este documento (estructura, naming, SOLID/DRY/KISS/YAGNI, reutilización). Devuelve aprobado o lista de cambios. | Reescribir la implementación.    |
-
-### Plantilla de spec
-
-```md
-# <Feature name>
-
-- Module: <domain>
-- Status: draft | approved | done
-- Approved by: - | <name> (<YYYY-MM-DD>)
-
-## Goal
-## Scope (in / out)
-## Acceptance criteria
-## Contracts (types, Zod schemas, endpoints)
-## Edge cases
-## Tests (what must be covered)
-## Plan (phases → tasks with Owns / Depends on / Group)
-```
-
-El formato completo está en `.claude/agents/spec.md`.
-
-### Unit testing
+## 3. Unit testing
 
 - Se testea **donde aporta valor**: lógica de negocio, services, hooks con lógica, schemas Zod, utilidades y stores. No se testea markup trivial ni componentes que solo componen.
-- Qué se testea lo define la spec (sección *Tests*).
 - Los tests van junto al archivo que prueban: `user-service.ts` → `user-service.test.ts`.
-- Un test que cubre un criterio de aceptación de la spec debe poder trazarse a ese criterio.
 - El test runner todavía **no está instalado**. Se elige y configura al implementar el primer test; hasta entonces no se agrega.

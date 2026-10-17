@@ -2,8 +2,6 @@
 
 Fuente de verdad visual del proyecto: **Claude Design** ([Ticketera Landing Redesign](https://claude.ai/artifact/NmeqG8Dta7F7zcSPmbQC8y)), con pantallas de escritorio (1440px) y móvil (390px) para landing, búsqueda, detalle, selección de entradas, checkout, confirmación, login, mis entradas y panel de organizador. Cuando este documento y el diseño no coincidan, manda el diseño y se actualiza este documento. Reglas del proyecto: **solo modo claro** y **Poppins** como única fuente.
 
-Implementación de referencia: `specs/shared/features-ui.md` (todas las fases en `done`).
-
 ## 1. Principios
 
 1. **La imagen del evento es la protagonista.** La UI es neutra (blanco + zinc); el color se reserva para acciones y estado.
