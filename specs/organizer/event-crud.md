@@ -456,9 +456,9 @@ Los tipos locales viejos (`organizer-event.ts`) y el store siguen existiendo (so
 ### Phase 7 — Dashboard: acciones por fila
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: copy de diálogos con test, `EventActionDialog` y su export | modules/event/lib/event-action-copy.ts, modules/event/lib/event-action-copy.test.ts, modules/event/components/event-action-dialog.tsx, modules/event/index.ts | Phase 6 | A | AC19, AC26 | todo |
-| T2 | `EventRowActions` (Editar, Ver ventas, menú, diálogos) | modules/organizer/components/event-row-actions.tsx | T1 | B | AC26 | todo |
-| T3 | `OrganizerDashboard` (acciones por fila, columna de acciones, avisos `?saved=` reales y de acciones) y validación de `saved` en la página | modules/organizer/components/organizer-dashboard.tsx, app/organizer/page.tsx | T2 | C | AC26 | todo |
+| T1 | setup: copy de diálogos con test, `EventActionDialog` y su export | modules/event/lib/event-action-copy.ts, modules/event/lib/event-action-copy.test.ts, modules/event/components/event-action-dialog.tsx, modules/event/index.ts | Phase 6 | A | AC19, AC26 | done |
+| T2 | `EventRowActions` (Editar, Ver ventas, menú, diálogos) | modules/organizer/components/event-row-actions.tsx | T1 | B | AC26 | done |
+| T3 | `OrganizerDashboard` (acciones por fila, columna de acciones, avisos `?saved=` reales y de acciones) y validación de `saved` en la página | modules/organizer/components/organizer-dashboard.tsx, app/organizer/page.tsx | T2 | C | AC26 | done |
 
 ### Phase 8 — Moderación en `/admin/events`
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
