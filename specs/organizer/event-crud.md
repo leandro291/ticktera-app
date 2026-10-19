@@ -436,10 +436,10 @@ Verificación manual (humano, tras los pasos manuales y con un organizador del s
 ### Phase 5 — Acciones, route handler de portada, hook y entradas (la UI vieja sigue funcionando)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Server Actions con `run` (permiso → Zod → servicio → mensaje fijo) | modules/event/actions/event-actions.ts | Phase 4 | A | AC2, AC3, AC29 | todo |
-| T2 | Route handler `POST|DELETE /api/events/[id]/cover` | app/api/events/[id]/cover/route.ts | Phase 4 | A | AC20 | todo |
-| T3 | Hook `useEventMutations` (invalida `["events"]`) | modules/event/hooks/use-event-mutations.ts | T1 | B | AC24, AC26 | todo |
-| T4 | Wire: `server.ts` (servicios) e `index.ts` (acciones, hook, reglas puras, tipos) | modules/event/server.ts, modules/event/index.ts | T1, T3 | C | AC30 | todo |
+| T1 | Server Actions con `run` (permiso → Zod → servicio → mensaje fijo) | modules/event/actions/event-actions.ts | Phase 4 | A | AC2, AC3, AC29 | done |
+| T2 | Route handler `POST|DELETE /api/events/[id]/cover` | app/api/events/[id]/cover/route.ts | Phase 4 | A | AC20 | done |
+| T3 | Hook `useEventMutations` (invalida `["events"]`) | modules/event/hooks/use-event-mutations.ts | T1 | B | AC24, AC26 | done |
+| T4 | Wire: `server.ts` (servicios) e `index.ts` (acciones, hook, reglas puras, tipos) | modules/event/server.ts, modules/event/index.ts | T1, T3 | C | AC30 | done |
 
 Nota Fase 5: cierra con `npm run build` (AC30).
 
