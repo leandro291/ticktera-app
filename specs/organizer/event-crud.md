@@ -447,11 +447,11 @@ Nota Fase 5: cierra con `npm run build` (AC30).
 Los tipos locales viejos (`organizer-event.ts`) y el store siguen existiendo (solo el dashboard usa `OrganizerEventStatus`) hasta la Fase 9. Hasta la Fase 7 el aviso `?saved=` del dashboard no conoce `updated` y conserva su copy viejo: se corrige allí.
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: tipos del formulario, `event-draft.ts` (soles↔céntimos, `buildSaveInput`, `draftFromEditData`) con test, `compressImage`; borrar `image-data-url.ts` | modules/organizer/types/event-form.ts, modules/organizer/lib/event-draft.ts, modules/organizer/lib/event-draft.test.ts, modules/organizer/lib/image-compress.ts, modules/organizer/lib/image-data-url.ts | Phase 5 | A | AC22, AC24 | todo |
-| T2 | `EventFormCover` con `Blob` y vista previa por URL | modules/organizer/components/event-form-cover.tsx | T1 | B | AC22 | todo |
-| T3 | `EventFormTiers` con tipos congelados (deshabilitados, `min`, sin quitar) y errores por campo | modules/organizer/components/event-form-tiers.tsx | T1 | B | AC25 | todo |
-| T4 | `EventForm` (crear/editar, validación cliente, errores de servidor, ack de impacto, subida de portada posterior), vista previa y diálogo de impacto | modules/organizer/components/event-form.tsx, modules/organizer/components/event-form-preview.tsx, modules/organizer/components/event-form-impact-dialog.tsx | T1, T2, T3 | C | AC21, AC24, AC25 | todo |
-| T5 | Páginas `new` (con categorías) y `[id]/edit` (con `getEventForEdit`, `notFound`, `?cover=failed`) | app/organizer/events/new/page.tsx, app/organizer/events/[id]/edit/page.tsx | T4 | D | AC23 | todo |
+| T1 | setup: tipos del formulario, `event-draft.ts` (soles↔céntimos, `buildSaveInput`, `draftFromEditData`) con test, `compressImage`; borrar `image-data-url.ts` | modules/organizer/types/event-form.ts, modules/organizer/lib/event-draft.ts, modules/organizer/lib/event-draft.test.ts, modules/organizer/lib/image-compress.ts, modules/organizer/lib/image-data-url.ts | Phase 5 | A | AC22, AC24 | done |
+| T2 | `EventFormCover` con `Blob` y vista previa por URL | modules/organizer/components/event-form-cover.tsx | T1 | B | AC22 | done |
+| T3 | `EventFormTiers` con tipos congelados (deshabilitados, `min`, sin quitar) y errores por campo | modules/organizer/components/event-form-tiers.tsx | T1 | B | AC25 | done |
+| T4 | `EventForm` (crear/editar, validación cliente, errores de servidor, ack de impacto, subida de portada posterior), vista previa y diálogo de impacto | modules/organizer/components/event-form.tsx, modules/organizer/components/event-form-preview.tsx, modules/organizer/components/event-form-impact-dialog.tsx | T1, T2, T3 | C | AC21, AC24, AC25 | done |
+| T5 | Páginas `new` (con categorías) y `[id]/edit` (con `getEventForEdit`, `notFound`, `?cover=failed`) | app/organizer/events/new/page.tsx, app/organizer/events/[id]/edit/page.tsx | T4 | D | AC23 | done |
 
 ### Phase 7 — Dashboard: acciones por fila
 | ID | Task | Owns | Depends on | Group | Criteria | Status |

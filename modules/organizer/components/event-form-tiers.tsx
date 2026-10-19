@@ -1,23 +1,38 @@
 "use client";
 
-import { PlusIcon, Trash2Icon } from "lucide-react";
+import { LockIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { getTotalCapacity } from "../lib/event-draft";
-import type { TierDraft } from "../types/organizer-event";
+import { getTotalCapacity, isEmptyTierRow } from "../lib/event-draft";
+import type { TierDraft } from "../types/event-form";
 import { field, section } from "./event-form-styles";
 
 const number = new Intl.NumberFormat("es-PE");
 
 interface EventFormTiersProps {
   tiers: TierDraft[];
+  /** Field errors keyed by the form path of the saved payload ("tiers.1.priceCents", "tiers"). */
+  errors: Record<string, string>;
   onChange: (id: string, patch: Partial<TierDraft>) => void;
   onAdd: () => void;
   onRemove: (id: string) => void;
 }
 
+/** Why a tier can't be removed or repriced (AC25), or null when it's free to edit. */
+function lockReason(tier: TierDraft): string | null {
+  if (tier.committed > 0) return `${number.format(tier.committed)} vendidas o reservadas: el nombre y el precio no cambian, y la cantidad no puede bajar de ahí.`;
+  if (tier.hasOrders) return "Tiene órdenes anteriores: no se puede quitar. Para dejar de venderlo, pon la cantidad en 0.";
+  return null;
+}
+
 /** "Tipos de entrada": table on desktop, one card per tier on mobile. At least one tier is kept. */
-export function EventFormTiers({ tiers, onChange, onAdd, onRemove }: EventFormTiersProps) {
+export function EventFormTiers({ tiers, errors, onChange, onAdd, onRemove }: EventFormTiersProps) {
   const single = tiers.length === 1;
+  // Errors point at the payload index, which skips fully empty rows: index = non-empty rows before this one.
+  const rows = tiers.map((tier, i) => {
+    const index = tiers.slice(0, i).filter((t) => !isEmptyTierRow(t)).length; // ≤ 10 tipos: O(n²) da igual
+    const empty = isEmptyTierRow(tier);
+    return { tier, error: (f: string) => (empty ? undefined : errors[`tiers.${index}${f ? `.${f}` : ""}`]) };
+  });
 
   return (
     <section className={section} aria-labelledby="tiers-title">
@@ -36,8 +51,14 @@ export function EventFormTiers({ tiers, onChange, onAdd, onRemove }: EventFormTi
       </div>
 
       <ul className="flex flex-col gap-3">
-        {tiers.map((tier, i) => {
+        {rows.map(({ tier, error }, i) => {
           const n = i + 1;
+          const frozen = tier.committed > 0;
+          const reason = lockReason(tier);
+          const messages = [error(""), error("name"), error("priceCents"), error("capacity"), error("maxPerOrder")].filter(Boolean);
+          const errorId = `tier-${tier.id}-error`;
+          const reasonId = `tier-${tier.id}-lock`;
+          const describedBy = [messages.length ? errorId : "", reason ? reasonId : ""].filter(Boolean).join(" ") || undefined;
           return (
             <li
               key={tier.id}
@@ -47,10 +68,12 @@ export function EventFormTiers({ tiers, onChange, onAdd, onRemove }: EventFormTi
               <label className="flex flex-col gap-1.5 text-[13px] font-medium lg:contents">
                 <span className="lg:sr-only">Nombre</span>
                 <Input
-                  required
                   value={tier.name}
+                  disabled={frozen}
                   onChange={(e) => onChange(tier.id, { name: e.target.value })}
                   aria-label={`Nombre del tipo de entrada ${n}`}
+                  aria-invalid={!!(error("name") || error("")) || undefined}
+                  aria-describedby={describedBy}
                   placeholder="Ej. General"
                   className={field}
                 />
@@ -59,14 +82,16 @@ export function EventFormTiers({ tiers, onChange, onAdd, onRemove }: EventFormTi
                 <label className="flex flex-col gap-1.5 text-[13px] font-medium lg:contents">
                   <span className="lg:sr-only">Precio (S/)</span>
                   <Input
-                    required
                     type="number"
                     min={0}
-                    step="any"
+                    step="0.01"
                     inputMode="decimal"
                     value={tier.price}
+                    disabled={frozen}
                     onChange={(e) => onChange(tier.id, { price: e.target.value })}
                     aria-label={`Precio del tipo de entrada ${n}`}
+                    aria-invalid={!!error("priceCents") || undefined}
+                    aria-describedby={describedBy}
                     placeholder="0"
                     className={field}
                   />
@@ -74,32 +99,62 @@ export function EventFormTiers({ tiers, onChange, onAdd, onRemove }: EventFormTi
                 <label className="flex flex-col gap-1.5 text-[13px] font-medium lg:contents">
                   <span className="lg:sr-only">Cantidad</span>
                   <Input
-                    required
                     type="number"
-                    min={1}
+                    min={tier.committed}
                     step={1}
                     inputMode="numeric"
                     value={tier.quantity}
                     onChange={(e) => onChange(tier.id, { quantity: e.target.value })}
                     aria-label={`Cantidad del tipo de entrada ${n}`}
+                    aria-invalid={!!error("capacity") || undefined}
+                    aria-describedby={describedBy}
                     placeholder="0"
                     className={field}
                   />
                 </label>
               </div>
-              <button
-                type="button"
-                disabled={single}
-                onClick={() => onRemove(tier.id)}
-                aria-label={`Quitar tipo de entrada ${n}`}
-                className="absolute top-1 right-1 flex size-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40 lg:static"
-              >
-                <Trash2Icon className="size-[18px]" aria-hidden />
-              </button>
+              {reason ? (
+                <span
+                  title={reason}
+                  className="absolute top-1 right-1 flex size-11 items-center justify-center text-muted-foreground lg:static"
+                >
+                  <LockIcon className="size-[18px]" aria-hidden />
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  disabled={single}
+                  onClick={() => onRemove(tier.id)}
+                  aria-label={`Quitar tipo de entrada ${n}`}
+                  className="absolute top-1 right-1 flex size-11 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40 lg:static"
+                >
+                  <Trash2Icon className="size-[18px]" aria-hidden />
+                </button>
+              )}
+              {(reason || messages.length > 0) && (
+                <div className="flex flex-col gap-1 text-[13px] lg:col-span-4">
+                  {reason && (
+                    <p id={reasonId} className="text-muted-foreground">
+                      {reason}
+                    </p>
+                  )}
+                  {messages.length > 0 && (
+                    <p id={errorId} className="font-medium text-destructive">
+                      {messages.join(" ")}
+                    </p>
+                  )}
+                </div>
+              )}
             </li>
           );
         })}
       </ul>
+
+      {errors.tiers && (
+        <p id="tiers-error" className="text-sm font-medium text-destructive">
+          {errors.tiers}
+        </p>
+      )}
 
       <button
         type="button"
