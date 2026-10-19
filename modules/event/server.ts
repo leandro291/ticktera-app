@@ -6,3 +6,4 @@ export { deleteEvent, moderateEvent, transitionEvent } from "./services/event-st
 export { getEventForEdit, listCategories } from "./services/event-read-service";
 export { removeEventCover, setEventCover } from "./services/event-cover-service";
 export { getPublicEvent, listUpcomingEvents } from "./services/catalog-service";
+export { lockAndLoadTiers, type Tx } from "./services/event-sales";

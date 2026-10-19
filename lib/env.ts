@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-const envSchema = z.object({
+export const envSchema = z.object({
   DATABASE_URL: z
     .string({ error: "DATABASE_URL is required" })
     .regex(/^postgres(ql)?:\/\//, "DATABASE_URL must start with postgres:// or postgresql://")
@@ -12,7 +12,14 @@ const envSchema = z.object({
   ),
   // Optional so `next build` never breaks: without it only cover uploads answer 503 (event-crud D15).
   BLOB_READ_WRITE_TOKEN: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
-})
+  // Optional for the same reason (checkout D8): without keys only checkout answers payment-unavailable / webhook 503.
+  STRIPE_SECRET_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().regex(/^sk_(test|live)_/, "STRIPE_SECRET_KEY must start with sk_test_ or sk_live_").optional()),
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().regex(/^pk_(test|live)_/, "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY must start with pk_test_ or pk_live_").optional()),
+  STRIPE_WEBHOOK_SECRET: z.preprocess((v) => (v === "" ? undefined : v), z.string().regex(/^whsec_/, "STRIPE_WEBHOOK_SECRET must start with whsec_").optional()),
+}).refine(
+  (e) => !e.STRIPE_SECRET_KEY || !e.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || e.STRIPE_SECRET_KEY.slice(3, 7) === e.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.slice(3, 7),
+  { path: ["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"], error: "Stripe secret and publishable keys must be the same mode (test or live)" },
+)
 
 const parsed = envSchema.safeParse(process.env)
 
