@@ -3,6 +3,7 @@ export { EventActionDialog } from "./components/event-action-dialog";
 export { EventDetailView } from "./components/event-detail-view";
 export { EventSearch } from "./components/event-search";
 export { HomePage } from "./components/home-page";
+export { ModerationEventsPage } from "./components/moderation-events-page";
 export { deleteEventAction, moderateEventAction, saveEventAction, transitionEventAction } from "./actions/event-actions";
 export { useEventMutations } from "./hooks/use-event-mutations";
 export { useEvents } from "./hooks/use-events";

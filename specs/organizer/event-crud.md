@@ -463,9 +463,9 @@ Los tipos locales viejos (`organizer-event.ts`) y el store siguen existiendo (so
 ### Phase 8 — Moderación en `/admin/events`
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | `ModerationEventsPage` y su export | modules/event/components/moderation-events-page.tsx, modules/event/index.ts | Phase 7 | A | AC27, AC28 | todo |
-| T2 | Rutas `app/admin` (layout `admin:panel`, página `events:moderate`) | app/admin/layout.tsx, app/admin/events/page.tsx | Phase 7 | A | AC27 | todo |
-| T3 | Ítem "Eventos" en el menú + test | components/shared/panel-nav.ts, components/shared/panel-nav.test.ts | Phase 7 | A | AC27 | todo |
+| T1 | `ModerationEventsPage` y su export | modules/event/components/moderation-events-page.tsx, modules/event/index.ts | Phase 7 | A | AC27, AC28 | done |
+| T2 | Rutas `app/admin` (layout `admin:panel`, página `events:moderate`) | app/admin/layout.tsx, app/admin/events/page.tsx | Phase 7 | A | AC27 | done |
+| T3 | Ítem "Eventos" en el menú + test | components/shared/panel-nav.ts, components/shared/panel-nav.test.ts | Phase 7 | A | AC27 | done |
 
 Nota Fase 8: T2 importa `ModerationEventsPage` de T1; `tsc` pasa al cierre de la fase.
 
