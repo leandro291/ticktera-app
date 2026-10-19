@@ -46,4 +46,10 @@ describe("resolveRouteAccess", () => {
       expect(WHO.map((w) => access(path, w))).toEqual(Array(WHO.length).fill("allow"));
     }
   });
+
+  it("AC18: webhook de Stripe y job interno no exigen sesion", () => {
+    for (const path of ["/api/webhooks/stripe", "/api/internal/expire-orders"]) {
+      expect(WHO.map((w) => access(path, w))).toEqual(Array(WHO.length).fill("allow"));
+    }
+  });
 });
