@@ -29,7 +29,7 @@ export function createOrder({ code, event, summary, buyerName, email, paymentMet
     items: summary.items.map((item) => ({
       zoneName: item.tier.name,
       quantity: item.quantity,
-      seats: item.seats.map(({ row, number }) => ({ row, number })),
+      seats: [], // se vende por zona y cantidad; el campo queda para órdenes viejas guardadas
       amount: item.amount,
     })),
     total: summary.total,

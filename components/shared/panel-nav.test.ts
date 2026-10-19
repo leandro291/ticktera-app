@@ -33,6 +33,7 @@ describe("getNavSections", () => {
     expect(sections[0].items.map((i) => i.id)).toEqual([
       "dashboard",
       "users",
+      "moderation",
       "organizers",
     ])
     expect(sections[1].items.map((i) => i.id)).toEqual([
@@ -48,8 +49,8 @@ describe("getNavSections", () => {
     const organizerItems = ["events"]
     expect(enabledIds("customer")).toEqual([])
     expect(enabledIds("organizer")).toEqual(organizerItems)
-    expect(enabledIds("admin")).toEqual(organizerItems)
-    expect(enabledIds("super_admin")).toEqual(["users", ...organizerItems])
+    expect(enabledIds("admin")).toEqual(["moderation", ...organizerItems])
+    expect(enabledIds("super_admin")).toEqual(["users", "moderation", ...organizerItems])
   })
 
   it("AC2: un ítem deshabilitado no expone href ni match", () => {
@@ -81,6 +82,13 @@ describe("getActiveNavItem", () => {
   it("AC3: Usuarios solo activo para super_admin", () => {
     expect(activeId(superAdmin, "/super-admin/users")).toBe("users")
     expect(activeId(admin, "/super-admin/users")).toBeNull()
+  })
+
+  it("AC27 (event-crud): Eventos de Administración activo en /admin/events para admin y super_admin", () => {
+    expect(activeId(admin, "/admin/events")).toBe("moderation")
+    expect(activeId(superAdmin, "/admin/events")).toBe("moderation")
+    expect(activeId(organizer, "/admin/events")).toBeNull()
+    expect(getNavSections("organizer").flatMap((s) => s.items).some((i) => i.id === "moderation")).toBe(false)
   })
 
   it("AC3: sin coincidencia devuelve null", () => {

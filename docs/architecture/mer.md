@@ -190,8 +190,8 @@ Evento publicado: tarjetas de landing y búsqueda, detalle, y formulario de "Cre
 | `city` | text | no | - | Filtro de ciudad en búsqueda. |
 | `lat` | numeric | sí | - | Nulo si no hay Google Maps (local). |
 | `lng` | numeric | sí | - | Idem. |
-| `status` | `event_status` | no | `draft` | `draft` mientras se crea; `published` es visible al público. |
-| `published_at` | timestamptz | sí | - | Se completa al publicar. |
+| `status` | `event_status` | no | `draft` | `draft` mientras se crea; `published` es visible al público; `suspended` (moderación) y `cancelled` (terminal) dejan de venderse. |
+| `published_at` | timestamptz | sí | - | Se completa al publicar y se conserva al despublicar: no nulo = el slug ya es público e inmutable. |
 | `created_at` | timestamptz | no | `now()` | |
 | `updated_at` | timestamptz | no | `now()` | |
 
@@ -286,7 +286,8 @@ PK = `id`.
 ## Reglas de negocio derivadas del modelo
 
 - **Disponibilidad** de un tipo = `capacity` − vendidas − pendientes vigentes. Vendidas = suma de `order_items.quantity` de órdenes `paid`. Pendientes vigentes = suma de órdenes `pending` con `expires_at` en el futuro.
-- **"Agotado" y "Últimas entradas"** se calculan al consultar a partir de la disponibilidad. Nunca se guardan.
+- **"Agotado" y "Últimas entradas"** se calculan al consultar a partir de la disponibilidad. Nunca se guardan. Zona agotada = cupo 0; "últimas" = cupo ≤ max(10, 10 % de la capacidad). Evento agotado = todas sus zonas agotadas; "últimas" = alguna zona en últimas.
+- **"Desde S/ X" del catálogo** = mínimo `price_cents` entre las zonas con cupo (si todas están agotadas, el mínimo de todas).
 - **KPIs del dashboard de organizador** (vendidas, ingresos, publicados) son consultas sobre estas tablas. No hay tablas de resumen. Se calculan sobre los eventos del alcance, sin importar el estado del evento:
   - **Entradas vendidas** = suma de `order_items.quantity` de órdenes `paid`.
   - **Ingresos** = suma de `order_items.quantity * unit_price_cents` de órdenes `paid`, en céntimos de PEN (el producto se castea a `bigint` en SQL: `int4 * int4` desborda). Las órdenes `pending`, `expired` y `refunded` aportan 0; como `refunded` es la orden entera (no hay reembolsos parciales), el ingreso ya es neto de reembolsos.
@@ -294,6 +295,8 @@ PK = `id`.
   - **Eventos publicados** = eventos con `status = 'published'`. Un evento `cancelled` o `suspended` con ventas `paid` suma entradas e ingresos, pero no cuenta como publicado.
   - Un evento sin tipos de entrada o sin ventas da 0 en todo (capacidad incluida).
 - **"Desde S/ X"** = mínimo de `ticket_types.price_cents` del evento.
+- **Transiciones de `events.status`** (CRUD de eventos): `draft ↔ published` (despublicar solo sin ventas comprometidas), `published → cancelled`, `published ↔ suspended` (moderación), `suspended → cancelled`. `cancelled` es terminal. Comprometido por tipo = vendidas + pendientes vigentes.
+- **Eliminar un evento**: solo sin `order_items` en ninguno de sus tipos (la FK sin cascade lo impide); con órdenes se cancela.
 - **Usuario borrado en Clerk** (webhook `user.deleted`): la fila de `users` queda `suspended`, no se borra. Sus órdenes se conservan. El borrado explícito desde el panel de super admin es distinto: elimina la fila (y el usuario de Clerk) solo si no tiene eventos ni órdenes asociados (FK `events.organizer_id` y `orders.user_id`, sin cascade); si los tiene, falla y la fila queda como estaba.
 
 ## Supuestos
@@ -308,6 +311,7 @@ PK = `id`.
 - Yape y PagoEfectivo: solo Stripe con tarjeta.
 - Stripe Connect, comisiones y payouts: cobra solo la plataforma.
 - Organizaciones y equipos: el usuario es el organizador.
+- **Butacas numeradas** (decisión 2026-10-18): se vende por zona y cantidad. Cada `ticket_types` es una zona con cupo; no hay tablas de recintos ni de asientos, y las entradas no llevan asiento. El mapa de zonas de la compra es solo visual (no persiste butacas). Si más adelante se venden butacas reales, se agregan una plantilla de recinto por evento y una tabla de asientos por orden (migración).
 - Tabla de holds: la reserva es una orden `pending` con `expires_at`.
 - Venues reutilizables o con mapa de zonas: el venue son campos del evento y la zona es un tipo de entrada.
 - Compra como invitado: `orders.user_id` es NOT NULL.

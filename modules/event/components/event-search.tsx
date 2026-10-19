@@ -4,8 +4,8 @@ import { useMemo, useState } from "react";
 import { ArrowUpDownIcon, SlidersHorizontalIcon, XIcon } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
-import { MONTH_OPTIONS, PRICE_RANGES } from "../data/events";
-import { filterEvents } from "../services/event-service";
+import { MONTH_OPTIONS, PRICE_RANGES } from "../lib/event-filter";
+import { cityOptions, filterEvents } from "../lib/event-filter";
 import { EVENT_CATEGORIES, type EventSort, type EventSummary } from "../types/event";
 import { EventCard } from "./event-card";
 import { EventEmptyState } from "./event-empty-state";
@@ -32,6 +32,7 @@ export function EventSearch({ events, initialQuery = "", initialFilters }: Event
 
   const results = useMemo(() => filterEvents(events, { query, sort, ...filters }), [events, query, sort, filters]);
   const counts = useMemo(() => ({ category: countBy(events, "category"), city: countBy(events, "city") }), [events]);
+  const cities = useMemo(() => cityOptions(events), [events]);
 
   const update = (patch: Partial<SearchFilterState>) => setFilters((f) => ({ ...f, ...patch }));
   const clearAll = () => {
@@ -86,7 +87,7 @@ export function EventSearch({ events, initialQuery = "", initialFilters }: Event
                   </SheetClose>
                 </SheetHeader>
                 <div className="grow overflow-y-auto px-4 py-1">
-                  <EventFilters filters={filters} onChange={update} counts={counts} showCategories={false} size="lg" />
+                  <EventFilters filters={filters} onChange={update} counts={counts} cities={cities} showCategories={false} size="lg" />
                 </div>
                 <SheetFooter className="flex-row gap-2.5 border-t border-divider px-4 pt-3 pb-5">
                   <button
@@ -150,7 +151,7 @@ export function EventSearch({ events, initialQuery = "", initialFilters }: Event
               </button>
             )}
           </div>
-          <EventFilters filters={filters} onChange={update} counts={counts} />
+          <EventFilters filters={filters} onChange={update} counts={counts} cities={cities} />
         </aside>
 
         <section aria-label="Resultados" className="flex flex-col gap-3 lg:gap-5">

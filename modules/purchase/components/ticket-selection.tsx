@@ -4,17 +4,11 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeftIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { cn } from "@/lib/utils";
-import { formatDateLong, formatDateShort, formatPrice, type EventSummary } from "@/modules/event";
-import { MAX_TICKETS_PER_ZONE } from "../data/venues";
+import { formatDateLong, formatDateShort, type EventSummary } from "@/modules/event";
 import { useEventCart } from "../hooks/use-event-cart";
-import type { EventVenue, Seat, ZoneTier } from "../types/venue";
+import type { EventVenue, ZoneTier } from "../types/venue";
 import { GaQuantity } from "./ga-quantity";
 import { OrderSummary, OrderSummaryBar } from "./order-summary";
-import { SeatMap } from "./seat-map";
-import { BestSeatsPicker, SeatChips } from "./seat-chips";
 import { ZonePicker } from "./zone-picker";
 
 interface TicketSelectionProps {
@@ -44,13 +38,10 @@ function Breadcrumbs({ zone, onBack }: { zone: ZoneTier; onBack: () => void }) {
 
 export function TicketSelection({ event, venue }: TicketSelectionProps) {
   const cart = useEventCart(venue);
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [zoneId, setZoneId] = useState<string | null>(null);
   const [highlighted, setHighlighted] = useState<string | null>(null);
 
   const zone = venue.tiers.find((t) => t.id === zoneId && t.status !== "sold-out");
-  const section = zone?.kind === "numbered" ? venue.sections.find((s) => s.zoneId === zone.id) : undefined;
-  const selectedSeats = (tier: ZoneTier) => cart.summary.items.find((i) => i.tier.id === tier.id)?.seats ?? [];
   const continueHref = `/checkout?event=${event.id}`;
 
   const backToZones = () => {
@@ -58,43 +49,7 @@ export function TicketSelection({ event, venue }: TicketSelectionProps) {
     setHighlighted(null);
   };
 
-  // On phones the seat map opens full screen; everything else stays inline.
-  const seatSheetOpen = !isDesktop && Boolean(section);
-
-  const seatCounter = (tier: ZoneTier) => (
-    <span aria-live="polite" className="text-[13px] text-muted-foreground tabular-nums">
-      {cart.quantityOf(tier.id)} de {MAX_TICKETS_PER_ZONE} butacas
-    </span>
-  );
-
-  const seatTools = (tier: ZoneTier, className?: string) =>
-    section && (
-      <div className={cn("flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-6", className)}>
-        <SeatChips seats={selectedSeats(tier)} onRemove={(seat: Seat) => cart.toggleSeat(tier.id, seat)} className="lg:pt-1.5" />
-        <BestSeatsPicker section={section} selectedSeatIds={cart.seatIdsOf(tier.id)} onPick={(ids) => cart.setSeats(tier.id, ids)} className="shrink-0" />
-      </div>
-    );
-
-  const seatMap = (tier: ZoneTier, framing: "overview" | "touch", className?: string) =>
-    section && (
-      <SeatMap
-        key={tier.id}
-        tier={tier}
-        section={section}
-        currency={venue.currency}
-        selectedSeatIds={cart.seatIdsOf(tier.id)}
-        atLimit={cart.isFull(tier.id)}
-        onToggle={(seat) => cart.toggleSeat(tier.id, seat)}
-        framing={framing}
-        className={className}
-      />
-    );
-
-  const stepHint = !zone
-    ? "Paso 1 de 2 · Elige una zona"
-    : zone.kind === "numbered"
-      ? "Paso 2 de 2 · Elige tus butacas"
-      : "Paso 2 de 2 · Elige cuántas entradas";
+  const stepHint = zone ? "Paso 2 de 2 · Elige cuántas entradas" : "Paso 1 de 2 · Elige una zona";
 
   return (
     <>
@@ -142,10 +97,10 @@ export function TicketSelection({ event, venue }: TicketSelectionProps) {
                 </h2>
                 <span className="text-[13px] font-medium text-muted-foreground max-lg:text-foreground">{stepHint}</span>
               </div>
-              {zone && !seatSheetOpen && <Breadcrumbs zone={zone} onBack={backToZones} />}
+              {zone && <Breadcrumbs zone={zone} onBack={backToZones} />}
             </div>
 
-            {(!zone || seatSheetOpen) && (
+            {!zone && (
               <ZonePicker
                 layout={venue.layout}
                 tiers={venue.tiers}
@@ -157,28 +112,21 @@ export function TicketSelection({ event, venue }: TicketSelectionProps) {
               />
             )}
 
-            {zone?.kind === "general-admission" && (
+            {zone && (
               <div className="flex flex-col gap-4 motion-safe:animate-[tk-zoom-in_220ms_ease-out]">
-                <GaQuantity tier={zone} currency={venue.currency} quantity={cart.quantityOf(zone.id)} onChange={(q) => cart.setQuantity(zone.id, q)} />
+                <GaQuantity
+                  tier={zone}
+                  currency={venue.currency}
+                  quantity={cart.quantityOf(zone.id)}
+                  max={cart.maxOf(zone.id)}
+                  onChange={(q) => cart.setQuantity(zone.id, q)}
+                />
                 <button type="button" onClick={backToZones} className="h-12 rounded-[14px] border-[1.5px] border-input text-[15px] font-semibold hover:border-foreground lg:w-fit lg:px-6">
                   {cart.quantityOf(zone.id) ? "Listo, ver otras zonas" : "Elegir otra zona"}
                 </button>
               </div>
             )}
 
-            {zone?.kind === "numbered" && isDesktop && (
-              <div className="flex flex-col gap-4 motion-safe:animate-[tk-zoom-in_260ms_ease-out]">
-                <div className="flex items-baseline justify-between gap-4">
-                  <span className="text-[15px]">
-                    <strong className="font-semibold">{zone.name}</strong>
-                    <span className="text-muted-foreground"> · {formatPrice(zone.price, venue.currency)} c/u</span>
-                  </span>
-                  {seatCounter(zone)}
-                </div>
-                {seatMap(zone, "overview")}
-                {seatTools(zone, "border-t border-divider pt-4")}
-              </div>
-            )}
           </section>
 
           <OrderSummary summary={cart.summary} currency={venue.currency} continueHref={continueHref} />
@@ -187,32 +135,6 @@ export function TicketSelection({ event, venue }: TicketSelectionProps) {
 
       <OrderSummaryBar summary={cart.summary} currency={venue.currency} continueHref={continueHref} />
 
-      <Sheet open={seatSheetOpen} onOpenChange={(open) => !open && backToZones()}>
-        <SheetContent side="bottom" showCloseButton={false} className="gap-0 bg-background p-0 data-[side=bottom]:h-dvh">
-          {zone && section && (
-            <>
-              <SheetHeader className="shrink-0 flex-row items-center justify-between gap-2 border-b border-divider py-2 pr-3 pl-2">
-                <div className="flex min-w-0 flex-col">
-                  <SheetClose className="flex h-8 w-fit items-center gap-1 rounded-lg px-1.5 text-sm font-medium text-primary">
-                    <ChevronLeftIcon className="size-4" aria-hidden />
-                    Todas las zonas
-                  </SheetClose>
-                  <SheetTitle className="px-1.5 text-base font-semibold">
-                    {zone.name} · {formatPrice(zone.price, venue.currency)}
-                  </SheetTitle>
-                  <SheetDescription className="sr-only">Elige tus butacas en el mapa.</SheetDescription>
-                </div>
-                {seatCounter(zone)}
-              </SheetHeader>
-              <div className="flex min-h-0 grow flex-col p-3">{seatMap(zone, "touch", "grow")}</div>
-              <SheetFooter className="gap-3 border-t border-divider px-4 pt-3 pb-5">
-                {seatTools(zone)}
-                <SheetClose className="h-[52px] rounded-[14px] bg-strong text-[15px] font-semibold text-white">Listo</SheetClose>
-              </SheetFooter>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
     </>
   );
 }

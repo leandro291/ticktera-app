@@ -3,33 +3,30 @@
 import { useState } from "react";
 import { ImageUpIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { imageFileToDataUrl } from "../lib/image-data-url";
+import { compressImage } from "../lib/image-compress";
 import { section } from "./event-form-styles";
 
-const ACCEPTED = ["image/jpeg", "image/png"];
+const ACCEPTED = ["image/jpeg", "image/png", "image/webp"];
+const MAX_SOURCE_BYTES = 15 * 1024 * 1024; // AC22: tope de origen; lo que se sube es el JPEG comprimido
 
 interface EventFormCoverProps {
-  image?: string;
-  onChange: (image: string | undefined) => void;
+  previewUrl: string | null;
+  /** The compressed JPEG to upload after saving, or null to remove the cover. */
+  onChange: (file: Blob | null) => void;
 }
 
-/**
- * Cover upload (click or drag & drop). The file never leaves the browser: it is compressed to a data URL
- * and saved with the event in localStorage (no backend yet).
- */
-export function EventFormCover({ image, onChange }: EventFormCoverProps) {
+/** Cover upload (click or drag & drop). It's compressed in the browser and uploaded once the event is saved. */
+export function EventFormCover({ previewUrl, onChange }: EventFormCoverProps) {
   const [dragging, setDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const pick = async (file: File | undefined) => {
     if (!file) return;
-    if (!ACCEPTED.includes(file.type)) {
-      setError("Usa una imagen JPG o PNG.");
-      return;
-    }
+    if (!ACCEPTED.includes(file.type)) return setError("Usa una imagen JPG, PNG o WebP.");
+    if (file.size > MAX_SOURCE_BYTES) return setError("La imagen pesa más de 15 MB. Prueba con una más liviana.");
     setError(null);
     try {
-      onChange(await imageFileToDataUrl(file));
+      onChange(await compressImage(file));
     } catch {
       setError("No pudimos leer esa imagen. Prueba con otra.");
     }
@@ -56,21 +53,21 @@ export function EventFormCover({ image, onChange }: EventFormCoverProps) {
           dragging && "border-primary bg-accent",
         )}
       >
-        {image && (
-          // eslint-disable-next-line @next/next/no-img-element -- local data URL preview
-          <img src={image} alt="" className="absolute inset-0 size-full object-cover" />
+        {previewUrl && (
+          // eslint-disable-next-line @next/next/no-img-element -- object URL or Blob URL preview
+          <img src={previewUrl} alt="" className="absolute inset-0 size-full object-cover" />
         )}
-        <span className={cn("relative flex flex-col items-center gap-1.5 lg:gap-2", image && "rounded-2xl bg-background/90 px-4 py-3")}>
+        <span className={cn("relative flex flex-col items-center gap-1.5 lg:gap-2", previewUrl && "rounded-2xl bg-background/90 px-4 py-3")}>
           <ImageUpIcon className="size-7" aria-hidden />
           <span className="text-[15px] font-semibold">
-            {image ? "Cambiar imagen" : <><span className="lg:hidden">Subir imagen</span><span className="hidden lg:inline">Arrastra una imagen o haz clic para subirla</span></>}
+            {previewUrl ? "Cambiar imagen" : <><span className="lg:hidden">Subir imagen</span><span className="hidden lg:inline">Arrastra una imagen o haz clic para subirla</span></>}
           </span>
-          <span className="text-xs text-muted-foreground lg:text-[13px]">JPG o PNG, horizontal (16:9)</span>
+          <span className="text-xs text-muted-foreground lg:text-[13px]">JPG, PNG o WebP, horizontal (16:9)</span>
         </span>
         <input type="file" accept={ACCEPTED.join(",")} className="sr-only" onChange={(e) => pick(e.target.files?.[0])} />
       </label>
-      {image && (
-        <button type="button" onClick={() => onChange(undefined)} className="w-fit text-sm font-semibold text-primary hover:underline">
+      {previewUrl && (
+        <button type="button" onClick={() => onChange(null)} className="w-fit text-sm font-semibold text-primary hover:underline">
           Quitar imagen
         </button>
       )}

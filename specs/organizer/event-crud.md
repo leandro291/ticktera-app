@@ -1,8 +1,8 @@
 # CRUD de eventos del organizador (con moderación de admin)
 
 - Module: organizer
-- Status: draft
-- Approved by: -
+- Status: done
+- Approved by: lenadro291 (2026-10-09)
 - Mode: SDD
 
 ## Goal
@@ -89,7 +89,7 @@ Permisos y autorización
 Máquina de estados y publicación
 - AC6: `allowedActions(status, { owner, moderator })` implementa D2 y está testeada para los 4 estados × {dueño, moderador, ambos, ninguno}: `suspended` no ofrece nada al dueño; `cancelled` solo `delete` al dueño; el moderador nunca recibe `edit`, `delete` ni acciones sobre `draft`.
 - AC7: `checkPublishable` implementa D4 (título, categoría, lugar, ciudad, fecha futura, ≥ 1 tipo, capacidad total ≥ 1) y devuelve todos los problemas, cada uno con su campo. Publicar con problemas → `not-publishable` con `fieldErrors` y nada cambia.
-- AC8: Publicar fija `status = 'published'` y `published_at = now()`; despublicar (`published → draft`) limpia `published_at` y exige **cero** ventas comprometidas (paid o pending vigente) → si no, `has-sales` ("cancélalo en lugar de despublicarlo"). Cancelar y moderar son compare-and-set sobre `status` bajo lock de fila: la transición inválida (ya cambió) → `invalid-transition`.
+- AC8: Publicar fija `status = 'published'` y `published_at = now()`; despublicar (`published → draft`) **conserva** `published_at` (marca que el evento ya se publicó y su slug es inmutable, D16; volver a publicar lo actualiza) y exige **cero** ventas comprometidas (paid o pending vigente) → si no, `has-sales` ("cancélalo en lugar de despublicarlo"). Cancelar y moderar son compare-and-set sobre `status` bajo lock de fila: la transición inválida (ya cambió) → `invalid-transition`.
 - AC9: Un evento `suspended` o `cancelled` no aparece en `GET /api/events?scope=published` (ya filtra por `published`) y la regla del checkout queda escrita en system-design §3 (D19).
 
 Guardar (crear / editar)
@@ -406,40 +406,40 @@ Verificación manual (humano, tras los pasos manuales y con un organizador del s
 ### Phase 1 — Permisos, helper de errores de BD, límites, estados y tipos (puro; la app no cambia)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: `events:manage-own` a admin/super_admin y `events:suspend` → `events:moderate` (+ matriz del test); mover `db-errors` a `lib/` (+ `isUniqueViolation`, `pgConstraint`) y actualizar el import de `users` | modules/auth/lib/permissions.ts, modules/auth/lib/permissions.test.ts, lib/db-errors.ts, lib/db-errors.test.ts, modules/users/lib/db-errors.ts, modules/users/lib/db-errors.test.ts, modules/users/services/user-admin-service.ts | - | A | AC1 | todo |
-| T2 | Límites, máquina de estados con test y tipos de escritura | modules/event/lib/event-limits.ts, modules/event/lib/event-transitions.ts, modules/event/lib/event-transitions.test.ts, modules/event/types/event-write.ts | - | B | AC6 | todo |
+| T1 | setup: `events:manage-own` a admin/super_admin y `events:suspend` → `events:moderate` (+ matriz del test); mover `db-errors` a `lib/` (+ `isUniqueViolation`, `pgConstraint`) y actualizar el import de `users` | modules/auth/lib/permissions.ts, modules/auth/lib/permissions.test.ts, lib/db-errors.ts, lib/db-errors.test.ts, modules/users/lib/db-errors.ts, modules/users/lib/db-errors.test.ts, modules/users/services/user-admin-service.ts | - | A | AC1 | done |
+| T2 | Límites, máquina de estados con test y tipos de escritura | modules/event/lib/event-limits.ts, modules/event/lib/event-transitions.ts, modules/event/lib/event-transitions.test.ts, modules/event/types/event-write.ts | - | B | AC6 | done |
 
 ### Phase 2 — Reglas puras de negocio (sin BD, sin UI)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Hora de Lima: `limaDateTimeToDate` e `isoToLimaTime`, con tests | modules/event/lib/lima-datetime.ts, modules/event/lib/lima-datetime.test.ts, modules/event/lib/format.ts, modules/event/lib/format.test.ts | Phase 1 | A | AC11 | todo |
-| T2 | Reglas de publicación con test | modules/event/lib/event-publish.ts, modules/event/lib/event-publish.test.ts | Phase 1 | A | AC7 | todo |
-| T3 | Congelamiento con ventas con test | modules/event/lib/event-freeze.ts, modules/event/lib/event-freeze.test.ts | Phase 1 | A | AC5, AC15, AC16 | todo |
-| T4 | Slug (`slugify` movido, `slugBase`, `uniqueSlug`) con test; el seed importa `slugify` | modules/event/lib/event-slug.ts, modules/event/lib/event-slug.test.ts, db/seed/mock-to-rows.ts | Phase 1 | A | AC13 | todo |
+| T1 | Hora de Lima: `limaDateTimeToDate` e `isoToLimaTime`, con tests | modules/event/lib/lima-datetime.ts, modules/event/lib/lima-datetime.test.ts, modules/event/lib/format.ts, modules/event/lib/format.test.ts | Phase 1 | A | AC11 | done |
+| T2 | Reglas de publicación con test | modules/event/lib/event-publish.ts, modules/event/lib/event-publish.test.ts | Phase 1 | A | AC7 | done |
+| T3 | Congelamiento con ventas con test | modules/event/lib/event-freeze.ts, modules/event/lib/event-freeze.test.ts | Phase 1 | A | AC5, AC15, AC16 | done |
+| T4 | Slug (`slugify` movido, `slugBase`, `uniqueSlug`) con test; el seed importa `slugify` | modules/event/lib/event-slug.ts, modules/event/lib/event-slug.test.ts, db/seed/mock-to-rows.ts | Phase 1 | A | AC13 | done |
 
 ### Phase 3 — Dependencias, schemas y errores de campo
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: `npm i @vercel/blob`; `BLOB_READ_WRITE_TOKEN` opcional en `lib/env.ts` y `.env.example`; `npx shadcn@latest add dropdown-menu` | package.json, package-lock.json, lib/env.ts, .env.example, components/ui/dropdown-menu.tsx | - | A | AC20 | todo |
-| T2 | Schemas Zod (guardar, transición, moderación, borrado) con test | modules/event/schemas/event-save-schema.ts, modules/event/schemas/event-save-schema.test.ts | Phase 2 | B | AC3, AC10 | todo |
-| T3 | Mapeo de issues a errores de campo con test | modules/event/lib/field-errors.ts, modules/event/lib/field-errors.test.ts | Phase 2 | B | AC24 | todo |
+| T1 | setup: `npm i @vercel/blob`; `BLOB_READ_WRITE_TOKEN` opcional en `lib/env.ts` y `.env.example`; `npx shadcn@latest add dropdown-menu` | package.json, package-lock.json, lib/env.ts, .env.example, components/ui/dropdown-menu.tsx | - | A | AC20 | done |
+| T2 | Schemas Zod (guardar, transición, moderación, borrado) con test | modules/event/schemas/event-save-schema.ts, modules/event/schemas/event-save-schema.test.ts | Phase 2 | B | AC3, AC10 | done |
+| T3 | Mapeo de issues a errores de campo con test | modules/event/lib/field-errors.ts, modules/event/lib/field-errors.test.ts | Phase 2 | B | AC24 | done |
 
 ### Phase 4 — Servicios de servidor y portada (BD/Blob; nadie los consume todavía)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Validación pura de portada con test | modules/event/lib/cover-image.ts, modules/event/lib/cover-image.test.ts | Phase 3 | A | AC20 | todo |
-| T2 | setup de servidor: `EventError`, log de auditoría, `lockAndLoadTiers` (lock + agregado de ventas) | modules/event/services/event-error.ts, modules/event/services/event-audit.ts, modules/event/services/event-sales.ts | Phase 3 | A | AC14, AC15, AC29 | todo |
-| T3 | `saveEvent` (crear/actualizar/publicar, slug, tipos, congelamiento, optimista) | modules/event/services/event-save-service.ts | T2 | B | AC4, AC5, AC8, AC12, AC13, AC14, AC15, AC16, AC17 | todo |
-| T4 | `transitionEvent`, `moderateEvent`, `deleteEvent` (lock, compare-and-set, `23503`) | modules/event/services/event-status-service.ts | T2 | B | AC4, AC8, AC18, AC19 | todo |
-| T5 | `getEventForEdit`, `listCategories`, `setEventCover`, `removeEventCover` | modules/event/services/event-read-service.ts, modules/event/services/event-cover-service.ts | T1, T2 | B | AC4, AC20, AC23 | todo |
+| T1 | Validación pura de portada con test | modules/event/lib/cover-image.ts, modules/event/lib/cover-image.test.ts | Phase 3 | A | AC20 | done |
+| T2 | setup de servidor: `EventError`, log de auditoría, `lockAndLoadTiers` (lock + agregado de ventas) | modules/event/services/event-error.ts, modules/event/services/event-audit.ts, modules/event/services/event-sales.ts | Phase 3 | A | AC14, AC15, AC29 | done |
+| T3 | `saveEvent` (crear/actualizar/publicar, slug, tipos, congelamiento, optimista) | modules/event/services/event-save-service.ts | T2 | B | AC4, AC5, AC8, AC12, AC13, AC14, AC15, AC16, AC17 | done |
+| T4 | `transitionEvent`, `moderateEvent`, `deleteEvent` (lock, compare-and-set, `23503`) | modules/event/services/event-status-service.ts | T2 | B | AC4, AC8, AC18, AC19 | done |
+| T5 | `getEventForEdit`, `listCategories`, `setEventCover`, `removeEventCover` | modules/event/services/event-read-service.ts, modules/event/services/event-cover-service.ts | T1, T2 | B | AC4, AC20, AC23 | done |
 
 ### Phase 5 — Acciones, route handler de portada, hook y entradas (la UI vieja sigue funcionando)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Server Actions con `run` (permiso → Zod → servicio → mensaje fijo) | modules/event/actions/event-actions.ts | Phase 4 | A | AC2, AC3, AC29 | todo |
-| T2 | Route handler `POST|DELETE /api/events/[id]/cover` | app/api/events/[id]/cover/route.ts | Phase 4 | A | AC20 | todo |
-| T3 | Hook `useEventMutations` (invalida `["events"]`) | modules/event/hooks/use-event-mutations.ts | T1 | B | AC24, AC26 | todo |
-| T4 | Wire: `server.ts` (servicios) e `index.ts` (acciones, hook, reglas puras, tipos) | modules/event/server.ts, modules/event/index.ts | T1, T3 | C | AC30 | todo |
+| T1 | Server Actions con `run` (permiso → Zod → servicio → mensaje fijo) | modules/event/actions/event-actions.ts | Phase 4 | A | AC2, AC3, AC29 | done |
+| T2 | Route handler `POST|DELETE /api/events/[id]/cover` | app/api/events/[id]/cover/route.ts | Phase 4 | A | AC20 | done |
+| T3 | Hook `useEventMutations` (invalida `["events"]`) | modules/event/hooks/use-event-mutations.ts | T1 | B | AC24, AC26 | done |
+| T4 | Wire: `server.ts` (servicios) e `index.ts` (acciones, hook, reglas puras, tipos) | modules/event/server.ts, modules/event/index.ts | T1, T3 | C | AC30 | done |
 
 Nota Fase 5: cierra con `npm run build` (AC30).
 
@@ -447,33 +447,33 @@ Nota Fase 5: cierra con `npm run build` (AC30).
 Los tipos locales viejos (`organizer-event.ts`) y el store siguen existiendo (solo el dashboard usa `OrganizerEventStatus`) hasta la Fase 9. Hasta la Fase 7 el aviso `?saved=` del dashboard no conoce `updated` y conserva su copy viejo: se corrige allí.
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: tipos del formulario, `event-draft.ts` (soles↔céntimos, `buildSaveInput`, `draftFromEditData`) con test, `compressImage`; borrar `image-data-url.ts` | modules/organizer/types/event-form.ts, modules/organizer/lib/event-draft.ts, modules/organizer/lib/event-draft.test.ts, modules/organizer/lib/image-compress.ts, modules/organizer/lib/image-data-url.ts | Phase 5 | A | AC22, AC24 | todo |
-| T2 | `EventFormCover` con `Blob` y vista previa por URL | modules/organizer/components/event-form-cover.tsx | T1 | B | AC22 | todo |
-| T3 | `EventFormTiers` con tipos congelados (deshabilitados, `min`, sin quitar) y errores por campo | modules/organizer/components/event-form-tiers.tsx | T1 | B | AC25 | todo |
-| T4 | `EventForm` (crear/editar, validación cliente, errores de servidor, ack de impacto, subida de portada posterior), vista previa y diálogo de impacto | modules/organizer/components/event-form.tsx, modules/organizer/components/event-form-preview.tsx, modules/organizer/components/event-form-impact-dialog.tsx | T1, T2, T3 | C | AC21, AC24, AC25 | todo |
-| T5 | Páginas `new` (con categorías) y `[id]/edit` (con `getEventForEdit`, `notFound`, `?cover=failed`) | app/organizer/events/new/page.tsx, app/organizer/events/[id]/edit/page.tsx | T4 | D | AC23 | todo |
+| T1 | setup: tipos del formulario, `event-draft.ts` (soles↔céntimos, `buildSaveInput`, `draftFromEditData`) con test, `compressImage`; borrar `image-data-url.ts` | modules/organizer/types/event-form.ts, modules/organizer/lib/event-draft.ts, modules/organizer/lib/event-draft.test.ts, modules/organizer/lib/image-compress.ts, modules/organizer/lib/image-data-url.ts | Phase 5 | A | AC22, AC24 | done |
+| T2 | `EventFormCover` con `Blob` y vista previa por URL | modules/organizer/components/event-form-cover.tsx | T1 | B | AC22 | done |
+| T3 | `EventFormTiers` con tipos congelados (deshabilitados, `min`, sin quitar) y errores por campo | modules/organizer/components/event-form-tiers.tsx | T1 | B | AC25 | done |
+| T4 | `EventForm` (crear/editar, validación cliente, errores de servidor, ack de impacto, subida de portada posterior), vista previa y diálogo de impacto | modules/organizer/components/event-form.tsx, modules/organizer/components/event-form-preview.tsx, modules/organizer/components/event-form-impact-dialog.tsx | T1, T2, T3 | C | AC21, AC24, AC25 | done |
+| T5 | Páginas `new` (con categorías) y `[id]/edit` (con `getEventForEdit`, `notFound`, `?cover=failed`) | app/organizer/events/new/page.tsx, app/organizer/events/[id]/edit/page.tsx | T4 | D | AC23 | done |
 
 ### Phase 7 — Dashboard: acciones por fila
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: copy de diálogos con test, `EventActionDialog` y su export | modules/event/lib/event-action-copy.ts, modules/event/lib/event-action-copy.test.ts, modules/event/components/event-action-dialog.tsx, modules/event/index.ts | Phase 6 | A | AC19, AC26 | todo |
-| T2 | `EventRowActions` (Editar, Ver ventas, menú, diálogos) | modules/organizer/components/event-row-actions.tsx | T1 | B | AC26 | todo |
-| T3 | `OrganizerDashboard` (acciones por fila, columna de acciones, avisos `?saved=` reales y de acciones) y validación de `saved` en la página | modules/organizer/components/organizer-dashboard.tsx, app/organizer/page.tsx | T2 | C | AC26 | todo |
+| T1 | setup: copy de diálogos con test, `EventActionDialog` y su export | modules/event/lib/event-action-copy.ts, modules/event/lib/event-action-copy.test.ts, modules/event/components/event-action-dialog.tsx, modules/event/index.ts | Phase 6 | A | AC19, AC26 | done |
+| T2 | `EventRowActions` (Editar, Ver ventas, menú, diálogos) | modules/organizer/components/event-row-actions.tsx | T1 | B | AC26 | done |
+| T3 | `OrganizerDashboard` (acciones por fila, columna de acciones, avisos `?saved=` reales y de acciones) y validación de `saved` en la página | modules/organizer/components/organizer-dashboard.tsx, app/organizer/page.tsx | T2 | C | AC26 | done |
 
 ### Phase 8 — Moderación en `/admin/events`
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | `ModerationEventsPage` y su export | modules/event/components/moderation-events-page.tsx, modules/event/index.ts | Phase 7 | A | AC27, AC28 | todo |
-| T2 | Rutas `app/admin` (layout `admin:panel`, página `events:moderate`) | app/admin/layout.tsx, app/admin/events/page.tsx | Phase 7 | A | AC27 | todo |
-| T3 | Ítem "Eventos" en el menú + test | components/shared/panel-nav.ts, components/shared/panel-nav.test.ts | Phase 7 | A | AC27 | todo |
+| T1 | `ModerationEventsPage` y su export | modules/event/components/moderation-events-page.tsx, modules/event/index.ts | Phase 7 | A | AC27, AC28 | done |
+| T2 | Rutas `app/admin` (layout `admin:panel`, página `events:moderate`) | app/admin/layout.tsx, app/admin/events/page.tsx | Phase 7 | A | AC27 | done |
+| T3 | Ítem "Eventos" en el menú + test | components/shared/panel-nav.ts, components/shared/panel-nav.test.ts | Phase 7 | A | AC27 | done |
 
 Nota Fase 8: T2 importa `ModerationEventsPage` de T1; `tsc` pasa al cierre de la fase.
 
 ### Phase 9 — Limpieza y documentación
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Borrar `useOrganizerStore` y `organizer-event.ts`; `PersistedStores` sin el store y con borrado único de `ticketera:organizer`; `organizer/index.ts` sin exports muertos | modules/organizer/store/use-organizer-store.ts, modules/organizer/types/organizer-event.ts, components/shared/persisted-stores.tsx, modules/organizer/index.ts | Phase 8 | A | AC32 | todo |
-| T2 | Docs: system-design (§1 Blob y env, §2 permisos y A3, sección "CRUD de eventos", §3 integración del checkout, casos borde) y mer (`events`, transiciones, huecos) | docs/architecture/system-design.md, docs/architecture/mer.md | Phase 8 | A | AC9, AC32 | todo |
+| T1 | Borrar `useOrganizerStore` y `organizer-event.ts`; `PersistedStores` sin el store y con borrado único de `ticketera:organizer`; `organizer/index.ts` sin exports muertos | modules/organizer/store/use-organizer-store.ts, modules/organizer/types/organizer-event.ts, components/shared/persisted-stores.tsx, modules/organizer/index.ts | Phase 8 | A | AC32 | done |
+| T2 | Docs: system-design (§1 Blob y env, §2 permisos y A3, sección "CRUD de eventos", §3 integración del checkout, casos borde) y mer (`events`, transiciones, huecos) | docs/architecture/system-design.md, docs/architecture/mer.md | Phase 8 | A | AC9, AC32 | done |
 
 Nota Fase 9: cierra con `npm run build` y los `grep` de AC32.
 
@@ -485,7 +485,9 @@ Nota Fase 9: cierra con `npm run build` y los `grep` de AC32.
 - H5 (opcional, antes de migrar el catálogo público) agregar `images.remotePatterns` para `*.public.blob.vercel-storage.com` en `next.config.ts`; hoy las portadas se muestran `unoptimized`.
 
 ## Open questions
-Ninguna bloquea; todas tienen default (el usuario valida):
+Resueltas por el usuario (2026-10-09): se aceptan los defaults de Q1–Q5 y Q7; Q6 se decide en la tarea de despliegue (en local el token va en `.env.local`).
+Corrección aprobada por el usuario (2026-10-09, Fase 4): AC8 decía que despublicar limpia `published_at`, lo que contradecía D16 (el slug se regeneraría tras despublicar). Ahora despublicar conserva `published_at`.
+Texto original:
 - Q1 (D11) Un borrador exige título, categoría, fecha, hora, lugar y ciudad (por las columnas NOT NULL; cero migraciones). Alternativa: hacer nullable `starts_at`/`venue_name`/`city` con migración Drizzle y manejar `null` en listados. Default: la primera.
 - Q2 (D5) El **nombre** de un tipo con ventas también se congela (no estaba en el requerimiento; `order_items` no guarda snapshot del nombre). Default: congelado.
 - Q3 (D6) Cambiar fecha/lugar con ventas: permitido con confirmación explícita y log. Alternativa: bloquearlo (obliga a cancelar, y no hay reembolsos). Default: permitido con ack.

@@ -2,21 +2,23 @@
 
 import { MinusIcon, PlusIcon, UsersIcon } from "lucide-react";
 import { formatPrice, type Currency } from "@/modules/event";
-import { MAX_TICKETS_PER_ZONE } from "../data/venues";
 import type { ZoneTier } from "../types/venue";
 
 interface GaQuantityProps {
   tier: ZoneTier;
   currency: Currency;
   quantity: number;
+  /** Per-order limit capped by what's left. */
+  max: number;
   onChange: (quantity: number) => void;
 }
 
 const stepButton = "flex size-12 items-center justify-center rounded-[14px] disabled:cursor-not-allowed disabled:opacity-40";
 
 /** Step 2 for general admission zones: how many tickets, with unit price, subtotal and the per-zone limit. */
-export function GaQuantity({ tier, currency, quantity, onChange }: GaQuantityProps) {
-  const full = quantity >= MAX_TICKETS_PER_ZONE;
+export function GaQuantity({ tier, currency, quantity, max, onChange }: GaQuantityProps) {
+  const full = quantity >= max;
+  const limit = max < tier.maxPerOrder ? `Quedan ${max} entradas en esta zona.` : `Máximo ${max} entradas por compra.`;
   return (
     <div className="flex flex-col gap-4 rounded-2xl bg-surface p-4 lg:p-6">
       <div className="flex items-center gap-3">
@@ -48,7 +50,7 @@ export function GaQuantity({ tier, currency, quantity, onChange }: GaQuantityPro
       </div>
 
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
-        <span className="text-muted-foreground">{full ? `Llegaste al máximo de ${MAX_TICKETS_PER_ZONE} entradas.` : `Máximo ${MAX_TICKETS_PER_ZONE} entradas por zona.`}</span>
+        <span className="text-muted-foreground">{full ? `Llegaste al máximo de ${max} entradas.` : limit}</span>
         <span className="whitespace-nowrap">
           Subtotal <strong className="font-semibold tabular-nums">{formatPrice(quantity * tier.price, currency)}</strong>
         </span>

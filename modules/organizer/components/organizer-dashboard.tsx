@@ -4,18 +4,17 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
-import { CalendarIcon, ChartColumnIcon, CircleCheckIcon, ImageIcon, PlusIcon, SearchIcon, TicketIcon, XIcon } from "lucide-react";
+import { CalendarIcon, ChartColumnIcon, CircleAlertIcon, CircleCheckIcon, ImageIcon, PlusIcon, SearchIcon, TicketIcon, XIcon } from "lucide-react";
 import { DatePicker } from "@/components/shared/date-picker";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { EventListError, formatDateShort, formatPriceCents, isoToLimaDate, useEvents, type EventDbStatus, type ManagedEventItem } from "@/modules/event";
 import { filterEvents, getOrganizerKpis, NO_FILTERS, type EventFilters, type EventStatusFilter } from "../lib/event-stats";
-import type { OrganizerEventStatus } from "../types/organizer-event";
 import { DashboardError, DashboardSkeleton } from "./dashboard-states";
-import { EventSalesSheet } from "./event-sales-sheet";
+import { EventRowActions, type RowNotice } from "./event-row-actions";
 import { SoldBar } from "./sold-bar";
 
-export type SavedNotice = OrganizerEventStatus;
+export type SavedNotice = "published" | "draft" | "updated";
 
 const FILTERS: { key: EventStatusFilter; label: string }[] = [
   { key: "all", label: "Todos" },
@@ -31,8 +30,9 @@ const STATUS_BADGE: Record<EventDbStatus, { label: string; className: string }> 
 };
 
 const SAVED_MESSAGE: Record<SavedNotice, string> = {
-  published: "Guardamos tu evento en este navegador. Todavía no aparece en el resumen.",
-  draft: "Guardamos tu borrador en este navegador.",
+  published: "Tu evento se publicó.",
+  draft: "Guardamos tu borrador.",
+  updated: "Guardamos los cambios.",
 };
 
 const number = new Intl.NumberFormat("es-PE");
@@ -40,7 +40,7 @@ const number = new Intl.NumberFormat("es-PE");
 const card = "rounded-[20px] border border-border bg-card lg:rounded-[22px]";
 const actionLink =
   "flex h-11 items-center justify-center rounded-xl border-[1.5px] border-input px-3.5 text-sm font-semibold text-foreground hover:border-foreground hover:text-foreground lg:inline-flex lg:h-8 lg:rounded-lg lg:px-3 lg:text-xs";
-const columns = "lg:grid-cols-[minmax(0,1fr)_130px_minmax(160px,260px)_150px_100px]";
+const columns = "lg:grid-cols-[minmax(0,1fr)_120px_minmax(150px,240px)_120px_220px]";
 const field = "h-11 text-[15px]"; // mismo alto en todos los filtros (igual que Usuarios)
 
 function Kpi({ label, value, icon: Icon, className, valueClassName }: { label: string; value: string; icon: LucideIcon; className?: string; valueClassName?: string }) {
@@ -55,7 +55,7 @@ function Kpi({ label, value, icon: Icon, className, valueClassName }: { label: s
   );
 }
 
-function EventRow({ event }: { event: ManagedEventItem }) {
+function EventRow({ event, onNotice }: { event: ManagedEventItem; onNotice: (notice: RowNotice) => void }) {
   const { sold, capacity, revenueCents } = event.sales;
   const badge = STATUS_BADGE[event.status];
   const revenue = formatPriceCents(revenueCents);
@@ -102,9 +102,7 @@ function EventRow({ event }: { event: ManagedEventItem }) {
 
       <span className="hidden text-right text-sm font-semibold tabular-nums lg:block">{revenue}</span>
 
-      <span className="lg:text-right">
-        {event.status !== "draft" && <EventSalesSheet event={event} triggerClassName={cn(actionLink, "w-full bg-transparent lg:w-auto")} />}
-      </span>
+      <EventRowActions event={event} onNotice={onNotice} triggerClassName={actionLink} />
     </li>
   );
 }
@@ -112,6 +110,7 @@ function EventRow({ event }: { event: ManagedEventItem }) {
 export function OrganizerDashboard({ saved }: { saved?: SavedNotice }) {
   const { data: events = [], isPending, isError, error, refetch } = useEvents("mine");
   const [filters, setFilters] = useState<EventFilters>(NO_FILTERS);
+  const [notice, setNotice] = useState<RowNotice | null>(saved ? { text: SAVED_MESSAGE[saved], kind: "success" } : null);
   const set = (patch: Partial<EventFilters>) => setFilters((f) => ({ ...f, ...patch }));
   const filtering = filters.status !== "all" || !!(filters.query || filters.from || filters.to);
   const kpis = getOrganizerKpis(events);
@@ -127,10 +126,16 @@ export function OrganizerDashboard({ saved }: { saved?: SavedNotice }) {
         </div>
       </div>
 
-      {saved && (
-        <p role="status" className="flex items-center gap-2 rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
-          <CircleCheckIcon className="size-[18px] shrink-0" aria-hidden />
-          {SAVED_MESSAGE[saved]}
+      {notice && (
+        <p
+          role={notice.kind === "error" ? "alert" : "status"}
+          className={cn(
+            "flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium",
+            notice.kind === "error" ? "border-red-200 bg-red-50 text-red-800" : "border-green-200 bg-green-50 text-green-800",
+          )}
+        >
+          {notice.kind === "error" ? <CircleAlertIcon className="size-[18px] shrink-0" aria-hidden /> : <CircleCheckIcon className="size-[18px] shrink-0" aria-hidden />}
+          {notice.text}
         </p>
       )}
 
@@ -220,7 +225,7 @@ export function OrganizerDashboard({ saved }: { saved?: SavedNotice }) {
             {visible.length ? (
               <ul aria-label="Mis eventos" className="flex flex-col gap-2.5 lg:gap-0">
                 {visible.map((event) => (
-                  <EventRow key={event.id} event={event} />
+                  <EventRow key={event.id} event={event} onNotice={setNotice} />
                 ))}
               </ul>
             ) : (

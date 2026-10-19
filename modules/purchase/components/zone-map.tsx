@@ -86,7 +86,7 @@ export function ZoneMap({ layout, tiers, currency, highlightedZoneId, onHighligh
                 role="button"
                 tabIndex={soldOut ? -1 : 0}
                 aria-disabled={soldOut}
-                aria-label={`${tier.name}, ${price}${tier.kind === "numbered" ? ", asientos numerados" : ""}`}
+                aria-label={`${tier.name}, ${price}`}
                 fill={soldOut ? "url(#tk-sold-out)" : tier.color}
                 stroke={GAP_COLOR}
                 strokeWidth={8}

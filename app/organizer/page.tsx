@@ -3,7 +3,7 @@ import { OrganizerDashboard, type SavedNotice } from "@/modules/organizer";
 
 export const metadata: Metadata = { title: "Panel de organizador" };
 
-const SAVED: SavedNotice[] = ["published", "draft"];
+const SAVED: SavedNotice[] = ["published", "draft", "updated"];
 
 export default async function OrganizerPage({ searchParams }: PageProps<"/organizer">) {
   const { saved } = await searchParams;

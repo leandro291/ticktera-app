@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDateLong, formatDateShort, formatPrice, formatPriceCents, getDateBadge, isoToLimaDate } from "./format";
+import { formatDateLong, formatDateShort, formatPrice, formatPriceCents, getDateBadge, isoToLimaDate, isoToLimaTime } from "./format";
 
 describe("formatPrice", () => {
   it("AC1: formats soles with the design symbol and es-PE grouping", () => {
@@ -42,5 +42,13 @@ describe("isoToLimaDate", () => {
     expect(isoToLimaDate("2026-11-14T21:00:00-05:00")).toBe("2026-11-14");
     expect(isoToLimaDate("2026-11-15T02:00:00Z")).toBe("2026-11-14");
     expect(isoToLimaDate("2026-11-15T05:00:00Z")).toBe("2026-11-15");
+  });
+});
+
+describe("isoToLimaTime", () => {
+  it("AC11 (event-crud): hora 24 h en Lima, medianoche 00:00", () => {
+    expect(isoToLimaTime("2026-11-15T02:00:00Z")).toBe("21:00");
+    expect(isoToLimaTime("2026-11-15T05:00:00Z")).toBe("00:00");
+    expect(isoToLimaTime("2026-11-15T14:35:00-05:00")).toBe("14:35");
   });
 });

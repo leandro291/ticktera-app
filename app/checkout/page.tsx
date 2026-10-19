@@ -1,24 +1,23 @@
 import type { Metadata } from "next";
-import { getEventById } from "@/modules/event";
-import { CheckoutView, getEventVenue, PurchaseHeader } from "@/modules/purchase";
+import { CheckoutView, PurchaseHeader } from "@/modules/purchase";
+import { getEventZones } from "@/modules/purchase/server";
 
 export const metadata: Metadata = { title: "Datos y pago" };
 
 export default async function CheckoutPage({ searchParams }: PageProps<"/checkout">) {
-  const { event: eventId } = await searchParams;
-  const event = typeof eventId === "string" ? await getEventById(eventId) : null;
-  const venue = event ? await getEventVenue(event) : null;
+  const { event: slug } = await searchParams;
+  const found = typeof slug === "string" ? await getEventZones(slug) : null;
 
   return (
     <>
       <PurchaseHeader
         step={2}
         title="Datos y pago"
-        backHref={event ? `/events/${event.id}/tickets` : "/events"}
+        backHref={found ? `/events/${found.event.id}/tickets` : "/events"}
         backLabel="Volver a entradas"
       />
       <main className="flex-1 bg-canvas">
-        <CheckoutView event={event} venue={venue} />
+        <CheckoutView event={found?.event ?? null} venue={found?.venue ?? null} />
       </main>
     </>
   );

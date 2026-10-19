@@ -5,11 +5,9 @@ import {
   ArrowRightIcon,
   CalendarIcon,
   ClockIcon,
-  DoorOpenIcon,
   MapPinIcon,
   QrCodeIcon,
   ShieldCheckIcon,
-  UserCheckIcon,
 } from "lucide-react";
 import { formatDateLong, formatPrice } from "../lib/format";
 import type { EventDetail, EventSummary } from "../types/event";
@@ -30,9 +28,7 @@ export function EventDetailView({ event, related, tiers }: EventDetailViewProps)
   const priceFrom = formatPrice(event.priceFrom, event.currency);
   const soldOut = event.status === "sold-out";
   const info = [
-    { icon: DoorOpenIcon, label: "Apertura de puertas", value: `${event.doorsTime} h` },
     { icon: ClockIcon, label: "Inicio del show", value: `${event.startTime} h` },
-    { icon: UserCheckIcon, label: "Edad mínima", value: event.minAge },
     { icon: QrCodeIcon, label: "Ingreso", value: "Entrada digital con QR" },
   ];
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${event.venue}, ${event.address}, ${event.city}`)}`;

@@ -5,7 +5,7 @@ import { db } from "@/db"
 import { users } from "@/db/schema"
 import type { Role } from "@/modules/auth"
 import { mirrorRoleToClerk, type UserRow } from "@/modules/auth/server"
-import { isForeignKeyViolation } from "../lib/db-errors"
+import { isForeignKeyViolation } from "@/lib/db-errors"
 import {
   checkRoleChange,
   checkStatusChange,

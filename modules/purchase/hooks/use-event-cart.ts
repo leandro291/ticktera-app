@@ -2,29 +2,32 @@
 
 import { useMemo } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { MAX_TICKETS_PER_ZONE } from "../data/venues";
 import { getCartSummary } from "../lib/cart-summary";
 import { useCartStore } from "../store/use-cart-store";
-import type { EventVenue, Seat } from "../types/venue";
+import { zoneMax, type EventVenue } from "../types/venue";
 
-/** Cart bound to one event: its lines, resolved summary and actions. */
+/** Cart bound to one event: its lines (clamped to what's left), resolved summary and actions. */
 export function useEventCart(venue: EventVenue) {
-  const { eventId, lines, setQuantity, toggleSeat, setSeats } = useCartStore(
-    useShallow((s) => ({ eventId: s.eventId, lines: s.lines, setQuantity: s.setQuantity, toggleSeat: s.toggleSeat, setSeats: s.setSeats })),
-  );
-  const eventLines = useMemo(() => (eventId === venue.eventId ? lines : {}), [eventId, lines, venue.eventId]);
-  const summary = useMemo(
-    () => getCartSummary(Object.values(eventLines), venue.tiers, venue.sections),
-    [eventLines, venue.tiers, venue.sections],
-  );
+  const { eventId, lines, setQuantity } = useCartStore(useShallow((s) => ({ eventId: s.eventId, lines: s.lines, setQuantity: s.setQuantity })));
+  const maxOf = (zoneId: string) => {
+    const tier = venue.tiers.find((t) => t.id === zoneId);
+    return tier ? zoneMax(tier) : 0;
+  };
+
+  // Lo guardado se recorta al cupo actual: otro comprador pudo llevarse entradas desde que se eligieron.
+  const summary = useMemo(() => {
+    const eventLines = eventId === venue.eventId ? Object.values(lines) : [];
+    const clamped = eventLines.map((line) => {
+      const tier = venue.tiers.find((t) => t.id === line.zoneId);
+      return { ...line, quantity: tier ? Math.min(line.quantity, zoneMax(tier)) : 0 };
+    });
+    return getCartSummary(clamped, venue.tiers);
+  }, [eventId, lines, venue.eventId, venue.tiers]);
 
   return {
     summary,
-    quantityOf: (zoneId: string) => eventLines[zoneId]?.quantity ?? 0,
-    seatIdsOf: (zoneId: string) => eventLines[zoneId]?.seatIds ?? [],
-    isFull: (zoneId: string) => (eventLines[zoneId]?.quantity ?? 0) >= MAX_TICKETS_PER_ZONE,
-    setQuantity: (zoneId: string, quantity: number) => setQuantity(venue.eventId, zoneId, quantity),
-    toggleSeat: (zoneId: string, seat: Seat) => toggleSeat(venue.eventId, zoneId, seat),
-    setSeats: (zoneId: string, seatIds: string[]) => setSeats(venue.eventId, zoneId, seatIds),
+    quantityOf: (zoneId: string) => summary.items.find((i) => i.tier.id === zoneId)?.quantity ?? 0,
+    maxOf,
+    setQuantity: (zoneId: string, quantity: number) => setQuantity(venue.eventId, zoneId, quantity, maxOf(zoneId)),
   };
 }

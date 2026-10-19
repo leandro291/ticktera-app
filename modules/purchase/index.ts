@@ -6,7 +6,6 @@ export { ZonePriceList } from "./components/zone-price-list";
 export { useOrderPdf } from "./hooks/use-order-pdf";
 export { downloadOrderIcs } from "./lib/calendar";
 export { formatOrderSeats, getOrderTickets, type OrderTicket } from "./lib/order";
-export { getEventVenue } from "./services/venue-service";
 export { useCartStore } from "./store/use-cart-store";
 export { useOrderStore, usePlacedOrders } from "./store/use-order-store";
 export type { Order } from "./types/order";

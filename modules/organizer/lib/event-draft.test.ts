@@ -1,68 +1,95 @@
 import { describe, expect, it } from "vitest";
-import type { OrganizerEvent, TierDraft } from "../types/organizer-event";
-import { buildOrganizerEvent, createEventDraft, draftFromEvent, getMinPrice, getTotalCapacity, parseAmount } from "./event-draft";
+import type { EventEditData } from "@/modules/event";
+import type { TierDraft } from "../types/event-form";
+import { buildSaveInput, createEventDraft, createTierDraft, draftFromEditData, getMinPrice, getTotalCapacity, solesToCents } from "./event-draft";
 
-const SAVED_EVENT: OrganizerEvent = {
-  id: "org-001",
-  catalogId: "evt-002",
-  title: "Festival Vive Latino Lima",
-  category: "Festivales",
-  description: "Dos escenarios, más de 20 artistas y zona de comida en la Costa Verde.",
-  image: "/images/events/vive-latino-lima.jpg",
-  date: "2026-10-05",
-  startTime: "14:00",
-  venue: "Costa Verde",
-  city: "Lima",
+const tier = (over: Partial<TierDraft>): TierDraft => ({ ...createTierDraft(), name: "General", price: "10", quantity: "5", ...over });
+
+const EDIT: EventEditData = {
+  id: "7b2d4e6f-1a3c-4b5d-8e9f-0a1b2c3d4e5f",
   status: "published",
+  updatedAt: "2026-10-09T20:00:00.123Z",
+  title: "Festival",
+  categoryId: "3f1c2a8e-0b7d-4c55-9a43-0e2f6d1b9c10",
+  description: "Uno\nDos",
+  coverImageUrl: null,
+  date: "2026-11-14",
+  startTime: "21:00",
+  venueName: "Estadio",
+  address: "Av. 1",
+  city: "Lima",
+  hasSales: true,
   tiers: [
-    { id: "org-001-general", name: "General", price: 120, capacity: 6500, sold: 6120 },
-    { id: "org-001-vip", name: "VIP", price: 280, capacity: 1500, sold: 1300 },
+    { id: "c1d2e3f4-a5b6-4c7d-9e8f-102132435465", name: "General", priceCents: 1250, capacity: 100, maxPerOrder: 4, sold: 3, reserved: 2, hasOrders: true },
+    { id: "d1d2e3f4-a5b6-4c7d-9e8f-102132435465", name: "VIP", priceCents: 30000, capacity: 20, maxPerOrder: 6, sold: 0, reserved: 0, hasOrders: false },
   ],
 };
 
-const tier = (price: string, quantity: string): TierDraft => ({ id: `t-${price}-${quantity}`, name: "General", price, quantity });
+describe("solesToCents", () => {
+  it("AC24: convierte soles a céntimos sin flotantes", () => {
+    expect(solesToCents("12.5")).toBe(1250);
+    expect(solesToCents("0.1")).toBe(10);
+    expect(solesToCents("19.99")).toBe(1999);
+    expect(solesToCents(" 40 ")).toBe(4000);
+  });
+
+  it("AC24: inválido → NaN", () => {
+    expect(solesToCents("1.005")).toBeNaN();
+    expect(solesToCents("")).toBeNaN();
+    expect(solesToCents("-1")).toBeNaN();
+    expect(solesToCents("1e3")).toBeNaN();
+  });
+});
 
 describe("createEventDraft", () => {
-  it("AC13: starts with two empty ticket tiers with distinct ids", () => {
-    const { tiers } = createEventDraft();
-    expect(tiers).toHaveLength(2);
-    expect(tiers[0].id).not.toBe(tiers[1].id);
+  it("AC24: usa la categoría por defecto y arranca con dos tipos vacíos con ids distintos", () => {
+    const draft = createEventDraft("cat-1");
+    expect(draft.categoryId).toBe("cat-1");
+    expect(draft.tiers).toHaveLength(2);
+    expect(draft.tiers[0].id).not.toBe(draft.tiers[1].id);
   });
 });
 
-describe("parseAmount", () => {
-  it("treats empty, invalid and negative input as 0", () => {
-    expect(parseAmount("")).toBe(0);
-    expect(parseAmount("abc")).toBe(0);
-    expect(parseAmount("-5")).toBe(0);
-    expect(parseAmount("12.5")).toBe(12.5);
+describe("buildSaveInput", () => {
+  it("AC24: descarta filas totalmente vacías, usa la posición y conserva serverId y maxPerOrder", () => {
+    const draft = {
+      ...createEventDraft("cat"),
+      tiers: [tier({ name: "", price: "", quantity: "" }), tier({ serverId: "srv-1", maxPerOrder: 3 }), tier({ name: "VIP", price: "12.5", quantity: "7" })],
+    };
+    const input = buildSaveInput(draft, { id: "evt", expectedUpdatedAt: "x", publish: true, acknowledgeBuyerImpact: false });
+    expect(input.tiers).toEqual([
+      { id: "srv-1", name: "General", priceCents: 1000, capacity: 5, maxPerOrder: 3 },
+      { name: "VIP", priceCents: 1250, capacity: 7, maxPerOrder: 6 },
+    ]);
+    expect(input).toMatchObject({ id: "evt", expectedUpdatedAt: "x", publish: true, acknowledgeBuyerImpact: false });
+  });
+
+  it("AC24: una fila existente vacía no se descarta; cantidad inválida → NaN", () => {
+    const input = buildSaveInput({ ...createEventDraft("c"), tiers: [tier({ serverId: "s", name: "", price: "", quantity: "1.5" })] }, { publish: false, acknowledgeBuyerImpact: false });
+    expect(input.tiers).toHaveLength(1);
+    expect(input.tiers[0].capacity).toBeNaN();
   });
 });
 
-describe("getTotalCapacity", () => {
-  it("AC13: adds whole quantities of every tier", () => {
-    expect(getTotalCapacity([tier("50", "100"), tier("", "250"), tier("10", "")])).toBe(350);
+describe("draftFromEditData", () => {
+  it("AC24: céntimos → soles, comprometido y órdenes", () => {
+    const draft = draftFromEditData(EDIT);
+    expect(draft).toMatchObject({ title: "Festival", description: "Uno\nDos", address: "Av. 1", date: "2026-11-14", startTime: "21:00" });
+    expect(draft.tiers[0]).toMatchObject({ serverId: EDIT.tiers[0].id, price: "12.5", quantity: "100", maxPerOrder: 4, committed: 5, hasOrders: true });
+    expect(draft.tiers[1]).toMatchObject({ price: "300", committed: 0, hasOrders: false });
+  });
+
+  it("AC24: ida y vuelta conserva precios y capacidades", () => {
+    const input = buildSaveInput(draftFromEditData(EDIT), { publish: false, acknowledgeBuyerImpact: false });
+    expect(input.tiers.map((t) => [t.id, t.priceCents, t.capacity])).toEqual(EDIT.tiers.map((t) => [t.id, t.priceCents, t.capacity]));
   });
 });
 
-describe("getMinPrice", () => {
-  it("AC13: returns the lowest positive price, or null when none is set", () => {
-    expect(getMinPrice([tier("80", "1"), tier("45", "1"), tier("0", "1")])).toBe(45);
-    expect(getMinPrice([tier("", "1")])).toBeNull();
-  });
-});
-
-describe("buildOrganizerEvent / draftFromEvent", () => {
-  it("AC13: round-trips a saved event and keeps sold counts and catalog id", () => {
-    const saved = SAVED_EVENT;
-    const rebuilt = buildOrganizerEvent(draftFromEvent(saved), "published", saved.id, saved);
-    expect(rebuilt).toEqual(saved);
-  });
-
-  it("AC13: trims text and starts new tiers with 0 sold", () => {
-    const draft = { ...createEventDraft(), title: "  Nuevo  ", tiers: [tier("30", "200")] };
-    const event = buildOrganizerEvent(draft, "draft", "org-new");
-    expect(event.title).toBe("Nuevo");
-    expect(event.tiers).toEqual([{ id: draft.tiers[0].id, name: "General", price: 30, capacity: 200, sold: 0 }]);
+describe("totals", () => {
+  it("AC24: capacidad total y precio mínimo sobre TierDraft", () => {
+    const tiers = [tier({ price: "50", quantity: "100" }), tier({ price: "", quantity: "abc" }), tier({ price: "30", quantity: "2.7" })];
+    expect(getTotalCapacity(tiers)).toBe(102);
+    expect(getMinPrice(tiers)).toBe(30);
+    expect(getMinPrice([tier({ price: "" })])).toBeNull();
   });
 });

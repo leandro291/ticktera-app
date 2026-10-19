@@ -27,6 +27,14 @@ export function isoToLimaDate(iso: string): string {
   return limaDate.format(new Date(iso));
 }
 
+// h23: medianoche es "00:00" (no "24:00").
+const limaTime = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Lima", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+
+/** ISO con zona → "HH:mm" (24 h) en hora de Lima. */
+export function isoToLimaTime(iso: string): string {
+  return limaTime.format(new Date(iso));
+}
+
 const toDate = (isoDate: string) => new Date(`${isoDate}T00:00:00Z`);
 
 const part = (isoDate: string, options: Intl.DateTimeFormatOptions) =>
