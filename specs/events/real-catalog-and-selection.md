@@ -157,8 +157,8 @@ Sin tests de BD ni de componentes (SETUP §3). Las consultas se verifican por le
 ### Phase 1 — Dominio puro (la app no cambia)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Disponibilidad con test | modules/event/lib/availability.ts, modules/event/lib/availability.test.ts | - | A | AC1 | todo |
-| T2 | Layout automático de zonas con test | modules/purchase/lib/zone-layout.ts, modules/purchase/lib/zone-layout.test.ts | - | A | AC3 | todo |
+| T1 | Disponibilidad con test | modules/event/lib/availability.ts, modules/event/lib/availability.test.ts | - | A | AC1 | done |
+| T2 | Layout automático de zonas con test | modules/purchase/lib/zone-layout.ts, modules/purchase/lib/zone-layout.test.ts | - | A | AC3 | done |
 
 ### Phase 2 — Catálogo en la BD (tarjeta 12)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
