@@ -1,19 +1,21 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRightIcon, CalendarPlusIcon, CheckIcon, DownloadIcon, LoaderCircleIcon, MailIcon, QrCodeIcon, TicketIcon } from "lucide-react";
+import { ArrowRightIcon, CalendarPlusIcon, CheckIcon, DownloadIcon, LoaderCircleIcon, QrCodeIcon, ReceiptIcon, TicketIcon } from "lucide-react";
 import { DecorativeQr } from "@/components/shared/decorative-qr";
-import { PageLoading } from "@/components/shared/page-loading";
-import { useStoreHydrated } from "@/hooks/use-store-hydrated";
 import { formatDateLong, formatPrice } from "@/modules/event";
 import { useOrderPdf } from "../hooks/use-order-pdf";
 import { downloadOrderIcs } from "../lib/calendar";
+import type { OrderStatus } from "../lib/order-mapper";
 import { formatOrderSeats } from "../lib/order";
-import { useLastOrder, useOrderStore } from "../store/use-order-store";
+import { useCartStore } from "../store/use-cart-store";
+import type { Order } from "../types/order";
+import { OrderStatusRefresh } from "./order-status-refresh";
 
 const NEXT_STEPS = [
-  { icon: MailIcon, title: "Revisa tu correo", text: "Ahí llegan tus entradas y el comprobante de pago." },
+  { icon: ReceiptIcon, title: "Guarda tu pedido", text: "Tu número de pedido identifica esta compra si necesitas ayuda." },
   { icon: QrCodeIcon, title: "Muestra tu QR", text: "Cada entrada tiene su propio QR. Muéstralo desde tu celular en el ingreso." },
   { icon: TicketIcon, title: "Todo en Mis entradas", text: "Entra con tu cuenta para ver y descargar tus entradas cuando quieras." },
 ];
@@ -22,20 +24,28 @@ const notch = "absolute size-6 rounded-full border border-border bg-canvas";
 const secondaryButton =
   "flex h-[50px] items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-input bg-background text-sm font-medium hover:border-foreground disabled:cursor-wait disabled:opacity-70 lg:h-[54px] lg:gap-2 lg:rounded-2xl lg:px-[22px] lg:text-[15px]";
 
-export function PurchaseConfirmation() {
-  const order = useLastOrder();
+const linkButton =
+  "mt-2 flex h-12 items-center rounded-[14px] bg-strong px-6 text-[15px] font-semibold text-white hover:bg-zinc-700 hover:text-white";
+
+/** D13: pantalla según `orders.status` de la BD (el servidor la lee; el cliente nunca marca un pago como exitoso). */
+export function PurchaseConfirmation({ status, order }: { status: OrderStatus; order: Order }) {
   const pdf = useOrderPdf(order);
-  const hydrated = useStoreHydrated(useOrderStore);
 
-  if (!hydrated) return <PageLoading />;
+  // D13: el carrito local se limpia al entrar (cubre también el regreso de 3DS).
+  useEffect(() => useCartStore.getState().clear(), []);
 
-  if (!order) {
+  if (status === "pending") return <OrderStatusRefresh />;
+
+  if (status !== "paid") {
+    const expired = status === "expired";
     return (
       <div className="mx-auto flex max-w-md flex-col items-center gap-3 px-4 py-20 text-center">
-        <h1 className="text-xl font-semibold">No hay una compra reciente</h1>
-        <p className="text-[15px] text-muted-foreground">Cuando completes un pago, verás aquí tu confirmación.</p>
-        <Link href="/events" className="mt-2 flex h-12 items-center rounded-[14px] bg-strong px-6 text-[15px] font-semibold text-white hover:bg-zinc-700 hover:text-white">
-          Explorar eventos
+        <h1 className="text-xl font-semibold">{expired ? "Tu reserva venció" : "Esta compra fue reembolsada"}</h1>
+        <p className="text-[15px] text-muted-foreground">
+          {expired ? "No se registró el pago y liberamos tus entradas. Elige de nuevo para volver a comprarlas." : "El importe vuelve a tu tarjeta según los plazos de tu banco."}
+        </p>
+        <Link href={expired ? `/events/${order.event.id}/tickets` : "/events"} className={linkButton}>
+          {expired ? "Elegir entradas" : "Explorar eventos"}
         </Link>
       </div>
     );
@@ -59,7 +69,7 @@ export function PurchaseConfirmation() {
         </span>
         <h1 className="text-[28px] leading-[1.15] font-bold tracking-[-0.025em] lg:text-[40px] lg:leading-[1.1]">¡Compra confirmada!</h1>
         <p className="max-w-[520px] text-[15px] leading-normal text-muted-foreground lg:text-[17px] lg:leading-[1.55]">
-          Enviamos tus entradas a {order.email ? <strong className="font-semibold text-foreground">{order.email}</strong> : "tu correo"}. También las tienes siempre en Mis entradas.
+          Tu pago fue confirmado. Tus entradas están siempre en Mis entradas{order.email ? <>, con la cuenta <strong className="font-semibold text-foreground">{order.email}</strong></> : ""}.
         </p>
         <span className="flex h-[34px] items-center rounded-full border border-border bg-background px-3.5 text-[13px] text-zinc-700 lg:h-9 lg:px-4 lg:text-sm">
           Pedido N.º <strong className="ml-1.5 font-semibold text-foreground">{order.code}</strong>
