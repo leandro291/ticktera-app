@@ -21,6 +21,10 @@ export const SAMPLE_ORDERS: Order[] = [
     buyerName: "Ana Pérez",
     email: "ana.perez@mail.com",
     paymentMethod: "card",
+    tickets: [
+      { code: "TK-24817-01", zoneName: "Campo General", holderName: "Ana Pérez", status: "valid" },
+      { code: "TK-24817-02", zoneName: "Campo General", holderName: "Ana Pérez", status: "valid" },
+    ],
   },
   {
     code: "TK-24790",
@@ -41,5 +45,6 @@ export const SAMPLE_ORDERS: Order[] = [
     buyerName: "Ana Pérez",
     email: "ana.perez@mail.com",
     paymentMethod: "yape",
+    tickets: [{ code: "TK-24790-01", zoneName: "Platea", holderName: "Ana Pérez", status: "valid" }],
   },
 ];

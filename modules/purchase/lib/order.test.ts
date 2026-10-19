@@ -24,6 +24,7 @@ const order: Order = {
   buyerName: "Ana Pérez",
   email: "ana@mail.com",
   paymentMethod: "card",
+  tickets: [],
 };
 
 describe("tickets", () => {
