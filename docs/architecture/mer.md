@@ -218,7 +218,7 @@ Pedido del checkout y de la confirmación. Una orden `pending` con `expires_at` 
 
 | Columna | Tipo | Null | Default | Notas |
 | ------- | ---- | ---- | ------- | ----- |
-| `code` | text | no | - | Único. "Pedido N.º TK-24817". |
+| `code` | text | no | - | Único. Lo genera el servidor: `TK-` + 5 caracteres de `23456789ABCDEFGHJKMNPQRSTUVWXYZ` (sin 0/O/1/I/L), con `crypto.randomInt`; un choque se reintenta. Es el código que ve el comprador ("Pedido N.º TK-K7M2Q") y la clave de `/checkout/confirmation?code=`. |
 | `user_id` | uuid | no | - | FK → `users.id`. Compra solo con cuenta. |
 | `status` | `order_status` | no | `pending` | |
 | `total_cents` | integer | no | - | Total cobrado en céntimos. |
@@ -248,7 +248,7 @@ Entrada individual emitida al pagar: una fila por unidad de `order_items.quantit
 | Columna | Tipo | Null | Default | Notas |
 | ------- | ---- | ---- | ------- | ----- |
 | `order_item_id` | uuid | no | - | FK → `order_items.id`, `on delete cascade`. |
-| `code` | text | no | - | Único. Código de la entrada (QR en "Mis entradas"). |
+| `code` | text | no | - | Único. Lo genera el servidor al pagar: 12 caracteres aleatorios del mismo alfabeto que `orders.code`, sin relación con el código de la orden (no adivinable). Es el contenido del QR; un choque se reintenta. |
 | `holder_name` | text | no | - | "Titular" de "Mis entradas". Por defecto el comprador (A8). |
 | `status` | `ticket_status` | no | `valid` | `void` al reembolsar. |
 
