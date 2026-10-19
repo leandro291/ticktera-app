@@ -5,3 +5,4 @@ export { saveEvent } from "./services/event-save-service";
 export { deleteEvent, moderateEvent, transitionEvent } from "./services/event-status-service";
 export { getEventForEdit, listCategories } from "./services/event-read-service";
 export { removeEventCover, setEventCover } from "./services/event-cover-service";
+export { getPublicEvent, listUpcomingEvents } from "./services/catalog-service";

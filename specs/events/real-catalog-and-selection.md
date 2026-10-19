@@ -1,7 +1,7 @@
 # Catálogo público y selección de entradas con datos reales
 
 - Module: event, purchase
-- Status: approved
+- Status: done
 - Approved by: lenadro291 (2026-10-18)
 - Mode: SDD
 
@@ -163,25 +163,25 @@ Sin tests de BD ni de componentes (SETUP §3). Las consultas se verifican por le
 ### Phase 2 — Catálogo en la BD (tarjeta 12)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: tipos `EventSummary`/`EventDetail`/`EventFilters` (D3, D4), `filterEvents` a `lib/event-filter.ts` (+test movido), placeholder, `next.config.ts` | modules/event/types/event.ts, modules/event/lib/event-filter.ts, modules/event/lib/event-filter.test.ts, public/images/events/placeholder.png, next.config.ts | Phase 1 | A | AC2, AC7 | todo |
-| T2 | Mapeo con test y `catalog-service` | modules/event/lib/catalog-mapper.ts, modules/event/lib/catalog-mapper.test.ts, modules/event/services/catalog-service.ts, modules/event/server.ts | T1 | B | AC2, AC4 | todo |
-| T3 | Páginas y componentes del catálogo: rutas `[slug]`, landing, búsqueda (opciones de filtro), detalle sin puertas/edad, exports de `index.ts` | app/page.tsx, app/events/page.tsx, app/events/[slug]/page.tsx, modules/event/components/*, modules/event/index.ts | T2 | C | AC6, AC7 | todo |
+| T1 | setup: tipos `EventSummary`/`EventDetail`/`EventFilters` (D3, D4), `filterEvents` a `lib/event-filter.ts` (+test movido), placeholder, `next.config.ts` | modules/event/types/event.ts, modules/event/lib/event-filter.ts, modules/event/lib/event-filter.test.ts, public/images/events/placeholder.png, next.config.ts | Phase 1 | A | AC2, AC7 | done |
+| T2 | Mapeo con test y `catalog-service` | modules/event/lib/catalog-mapper.ts, modules/event/lib/catalog-mapper.test.ts, modules/event/services/catalog-service.ts, modules/event/server.ts | T1 | B | AC2, AC4 | done |
+| T3 | Páginas y componentes del catálogo: rutas `[slug]`, landing, búsqueda (opciones de filtro), detalle sin puertas/edad, exports de `index.ts` | app/page.tsx, app/events/page.tsx, app/events/[slug]/page.tsx, modules/event/components/*, modules/event/index.ts | T2 | C | AC6, AC7 | done |
 
 Nota Fase 2: T3 también mueve `app/events/[id]/tickets/page.tsx` a `[slug]` apuntando todavía al flujo actual con `getEventZones` de la Fase 3 no disponible: para que `tsc` pase, la página de entradas se adapta en la misma fase con un `notFound()` temporal si no hay zonas. Cierra con `npm run build`.
 
 ### Phase 3 — Selección por zona y cantidad (tarjeta 13)
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | setup: tipos de venue y carrito sin butacas (+tests), `zone-service`, `modules/purchase/server.ts` | modules/purchase/types/venue.ts, modules/purchase/store/use-cart-store.ts, modules/purchase/store/use-cart-store.test.ts, modules/purchase/lib/cart-summary.ts, modules/purchase/lib/cart-summary.test.ts, modules/purchase/services/zone-service.ts, modules/purchase/server.ts | Phase 2 | A | AC5 | todo |
-| T2 | UI: `TicketSelection`, `ZonePicker`, `ZoneMap`, `GaQuantity`, `OrderSummary`, `ZonePriceList`, `useEventCart`, checkout y páginas `tickets`/`checkout`; borrar código de butacas | modules/purchase/components/*, modules/purchase/hooks/use-event-cart.ts, modules/purchase/lib/{best-seats,seat-layout}.ts (+tests), modules/purchase/index.ts, app/events/[slug]/tickets/page.tsx, app/checkout/page.tsx, app/events/[slug]/page.tsx | T1 | B | AC8, AC9, AC10 | todo |
+| T1 | setup: tipos de venue y carrito sin butacas (+tests), `zone-service`, `modules/purchase/server.ts` | modules/purchase/types/venue.ts, modules/purchase/store/use-cart-store.ts, modules/purchase/store/use-cart-store.test.ts, modules/purchase/lib/cart-summary.ts, modules/purchase/lib/cart-summary.test.ts, modules/purchase/services/zone-service.ts, modules/purchase/server.ts | Phase 2 | A | AC5 | done |
+| T2 | UI: `TicketSelection`, `ZonePicker`, `ZoneMap`, `GaQuantity`, `OrderSummary`, `ZonePriceList`, `useEventCart`, checkout y páginas `tickets`/`checkout`; borrar código de butacas | modules/purchase/components/*, modules/purchase/hooks/use-event-cart.ts, modules/purchase/lib/{best-seats,seat-layout}.ts (+tests), modules/purchase/index.ts, app/events/[slug]/tickets/page.tsx, app/checkout/page.tsx, app/events/[slug]/page.tsx | T1 | B | AC8, AC9, AC10 | done |
 
 Nota Fase 3: cierra con `npm run build` y el `grep` de AC10.
 
 ### Phase 4 — Mock solo para el seed y docs
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Mover mock a `db/seed/data/`, capacidad fija de zonas numeradas, borrar `event-service.ts`/`venue-service.ts` y datos mock de los módulos | db/seed/*, modules/event/data/*, modules/event/services/event-service.ts, modules/event/services/event-service.test.ts, modules/purchase/data/venues.ts, modules/purchase/services/venue-service.ts, modules/purchase/services/venue-service.test.ts | Phase 3 | A | AC10, AC11 | todo |
-| T2 | Docs: system-design (catálogo público, rutas por slug, zonas) y mer (disponibilidad D6/D7) | docs/architecture/system-design.md, docs/architecture/mer.md | Phase 3 | A | - | todo |
+| T1 | Mover mock a `db/seed/data/`, capacidad fija de zonas numeradas, borrar `event-service.ts`/`venue-service.ts` y datos mock de los módulos | db/seed/*, modules/event/data/*, modules/event/services/event-service.ts, modules/event/services/event-service.test.ts, modules/purchase/data/venues.ts, modules/purchase/services/venue-service.ts, modules/purchase/services/venue-service.test.ts | Phase 3 | A | AC10, AC11 | done |
+| T2 | Docs: system-design (catálogo público, rutas por slug, zonas) y mer (disponibilidad D6/D7) | docs/architecture/system-design.md, docs/architecture/mer.md | Phase 3 | A | - | done |
 
 ## Open questions
 Resueltas por el usuario (2026-10-18): se aceptan los defaults de Q1–Q5. Texto original:
@@ -190,3 +190,10 @@ Resueltas por el usuario (2026-10-18): se aceptan los defaults de Q1–Q5. Texto
 - Q3 (D4) Se quitan "Apertura de puertas" y "Edad mínima" del detalle. Alternativa: agregarlas al formulario y a la BD (migración). Default: quitarlas.
 - Q4 (D6) Umbral de "Últimas entradas": `≤ max(10, 10 %)` de la capacidad de la zona. Default: así.
 - Q5 (D8) Destacados = 5 próximos eventos (sin columna "destacado"). Default: así.
+
+## Implementation notes
+- D3: las opciones de categoría siguen saliendo de `EVENT_CATEGORIES` (idénticas a la tabla `categories`, que no se edita); las ciudades salen de los eventos listados (`cityOptions`).
+- D8: destacados y relacionados son helpers puros (`pickFeatured`, `pickRelated`) sobre la lista ya cargada, para no repetir la consulta (D12).
+- D9: el radio exterior del mapa automático es 480 (no 540): con ±80° el anillo exterior se salía del ancho del mapa (lo detectó el test de geometría).
+- Fases 2–4 se implementaron juntas porque los tipos del catálogo, el venue mock y el seed se rompían entre sí a mitad de camino.
+- Verificación manual (2026-10-18, `next start` contra la BD de desarrollo): landing, `/events`, detalle y entradas 200; slug inexistente e id mock `evt-001` 404; suspender un evento lo saca del catálogo (404) y reactivarlo lo devuelve.

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { SearchIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MONTH_OPTIONS, PRICE_RANGES } from "../data/events";
+import { MONTH_OPTIONS, PRICE_RANGES } from "../lib/event-filter";
 import type { PriceRangeKey } from "../types/event";
 
 export interface EventSearchValues {

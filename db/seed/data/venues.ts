@@ -1,11 +1,9 @@
-import type { AvailabilityStatus } from "@/modules/event";
-import type { VenueLayout } from "../types/venue";
+import type { MockVenueLayout } from "./types";
 
 export const MAX_TICKETS_PER_ZONE = 6;
 
 // Venue maps: zones are ring sectors around a half-moon stage (see ZoneArc; the map is 1000 units wide).
-// Numbered zones get their rows and seats from their arc (lib/seat-layout), so the seat map matches this shape.
-export const VENUE_LAYOUTS: Record<VenueLayout["id"], VenueLayout> = {
+export const VENUE_LAYOUTS: Record<MockVenueLayout["id"], MockVenueLayout> = {
   stadium: {
     id: "stadium",
     stageRadius: 150,
@@ -27,11 +25,4 @@ export const VENUE_LAYOUTS: Record<VenueLayout["id"], VenueLayout> = {
       { id: "mezzanine", name: "Mezzanine", shortName: "Mezzanine", kind: "numbered", arc: { inner: 366, outer: 500, from: -72, to: 72 }, color: "#c7d2fe", textColor: "#1e1b4b", priceFactor: 1 },
     ],
   },
-};
-
-// Per-event availability overrides (mock). Zones not listed follow the event status.
-export const ZONE_STATUS_OVERRIDES: Record<string, Record<string, AvailabilityStatus>> = {
-  "evt-001": { vip: "sold-out", occidente: "last-tickets" },
-  "evt-006": { vip: "sold-out", general: "last-tickets" },
-  "evt-004": { "palco-derecho": "sold-out" },
 };

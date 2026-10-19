@@ -1,6 +1,6 @@
 "use client";
 
-import { ArmchairIcon, ChevronRightIcon, UsersIcon } from "lucide-react";
+import { ChevronRightIcon, UsersIcon } from "lucide-react";
 import { formatPrice, type Currency } from "@/modules/event";
 import { cn } from "@/lib/utils";
 import { zoneSwatch } from "../lib/zone-style";
@@ -34,10 +34,8 @@ export function ZonePicker({ layout, tiers, currency, quantityOf, highlightedZon
       <ul aria-label="Zonas" className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:gap-3" onPointerLeave={() => onHighlight(null)}>
         {tiers.map((tier) => {
           const soldOut = tier.status === "sold-out";
-          const numbered = tier.kind === "numbered";
           const chosen = quantityOf(tier.id);
           const highlighted = tier.id === highlightedZoneId;
-          const TypeIcon = numbered ? ArmchairIcon : UsersIcon;
           return (
             <li key={tier.id}>
               <button
@@ -47,7 +45,7 @@ export function ZonePicker({ layout, tiers, currency, quantityOf, highlightedZon
                 onPointerEnter={() => onHighlight(tier.id)}
                 onFocus={() => onHighlight(tier.id)}
                 onBlur={() => onHighlight(null)}
-                aria-label={`${tier.name}, ${soldOut ? "agotado" : formatPrice(tier.price, currency)}, ${numbered ? "numerada" : "general"}${chosen ? `, ${chosen} elegidas` : ""}`}
+                aria-label={`${tier.name}, ${soldOut ? "agotado" : formatPrice(tier.price, currency)}, general${chosen ? `, ${chosen} elegidas` : ""}`}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-2xl border-[1.5px] bg-card p-3.5 text-left transition-[border-color,box-shadow] lg:p-4",
                   soldOut ? "cursor-not-allowed border-border opacity-60" : highlighted ? "border-strong shadow-[0_8px_20px_-14px_rgba(24,24,27,.5)]" : chosen ? "border-primary" : "border-border",
@@ -67,8 +65,8 @@ export function ZonePicker({ layout, tiers, currency, quantityOf, highlightedZon
                     )}
                   </span>
                   <span className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-                    <TypeIcon className="size-3.5 shrink-0" aria-hidden />
-                    {numbered ? "Numerada · eliges tu butaca" : "General · sin butaca"}
+                    <UsersIcon className="size-3.5 shrink-0" aria-hidden />
+                    General · sin butaca
                   </span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1">

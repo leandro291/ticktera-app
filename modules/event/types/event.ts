@@ -16,29 +16,29 @@ export type AvailabilityStatus = "available" | "last-tickets" | "sold-out";
 export type Currency = "PEN" | "USD" | "EUR";
 
 export interface EventSummary {
+  /** Slug: clave pública de rutas y del carrito (catalog D1). */
   id: string;
   title: string;
-  category: EventCategory;
+  /** Nombre de la categoría (tabla `categories`; hoy coincide con EVENT_CATEGORIES). */
+  category: string;
+  /** Portada o placeholder. */
   image: string;
   imageAlt: string;
-  /** ISO date, yyyy-mm-dd. Display strings are derived with `lib/format`. */
+  /** ISO date, yyyy-mm-dd, in Lima. Display strings are derived with `lib/format`. */
   date: string;
   venue: string;
   city: string;
   currency: Currency;
+  /** Soles. */
   priceFrom: number;
   status: AvailabilityStatus;
 }
 
-export type VenueLayoutId = "stadium" | "theater";
-
 export interface EventDetail extends EventSummary {
+  /** HH:mm in Lima. */
   startTime: string;
-  doorsTime: string;
-  minAge: string;
   description: string;
   address: string;
-  venueLayoutId: VenueLayoutId;
 }
 
 export type EventSort = "date" | "price";
@@ -47,7 +47,7 @@ export type PriceRangeKey = "any" | "u50" | "50" | "150" | "300";
 
 export interface EventFilters {
   query?: string;
-  categories?: EventCategory[];
+  categories?: string[];
   cities?: string[];
   /** Two-digit month ("10") or "any". */
   month?: string;

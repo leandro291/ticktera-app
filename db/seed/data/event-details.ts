@@ -1,9 +1,7 @@
-import type { EventDetail, EventSummary } from "../types/event";
-
-type DetailFields = Omit<EventDetail, keyof EventSummary>;
+import type { MockEventDetailFields } from "./types";
 
 // Mock detail fields, keyed by event id. Merged with `EVENTS` by the service.
-export const EVENT_DETAILS: Record<string, DetailFields> = {
+export const EVENT_DETAILS: Record<string, MockEventDetailFields> = {
   "evt-001": {
     startTime: "21:00",
     doorsTime: "17:00",

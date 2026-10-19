@@ -1,0 +1,2 @@
+// Server-only entry (touches pg). Client-safe exports live in ./index.ts.
+export { getEventZones } from "./services/zone-service";

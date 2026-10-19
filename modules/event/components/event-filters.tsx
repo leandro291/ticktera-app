@@ -3,11 +3,11 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
-import { CITIES, MONTH_OPTIONS, PRICE_RANGES } from "../data/events";
-import { EVENT_CATEGORIES, type EventCategory, type PriceRangeKey } from "../types/event";
+import { MONTH_OPTIONS, PRICE_RANGES } from "../lib/event-filter";
+import { EVENT_CATEGORIES, type PriceRangeKey } from "../types/event";
 
 export interface SearchFilterState {
-  categories: EventCategory[];
+  categories: string[];
   cities: string[];
   month: string;
   price: PriceRangeKey;
@@ -17,6 +17,8 @@ interface EventFiltersProps {
   filters: SearchFilterState;
   onChange: (patch: Partial<SearchFilterState>) => void;
   counts: { category: Record<string, number>; city: Record<string, number> };
+  /** Ciudades de los eventos listados. */
+  cities: string[];
   showCategories?: boolean;
   /** Larger touch targets for the mobile panel. */
   size?: "default" | "lg";
@@ -24,7 +26,7 @@ interface EventFiltersProps {
 
 const toggle = <T,>(list: T[], value: T) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
 
-export function EventFilters({ filters, onChange, counts, showCategories = true, size = "default" }: EventFiltersProps) {
+export function EventFilters({ filters, onChange, counts, cities, showCategories = true, size = "default" }: EventFiltersProps) {
   const row = cn("flex cursor-pointer items-center gap-3", size === "lg" ? "h-11 text-[15px]" : "h-[38px] text-sm");
   const control = size === "lg" ? "size-5" : "size-[18px]";
   const fieldset = "flex flex-col border-b border-divider py-4 last:border-b-0 lg:py-[18px]";
@@ -65,7 +67,7 @@ export function EventFilters({ filters, onChange, counts, showCategories = true,
     <div className="flex flex-col">
       {showCategories &&
         checkboxGroup("Categoría", EVENT_CATEGORIES, filters.categories, "categories", counts.category)}
-      {checkboxGroup("Ciudad", CITIES, filters.cities, "cities", counts.city)}
+      {checkboxGroup("Ciudad", cities, filters.cities, "cities", counts.city)}
       {radioGroup("Fecha", MONTH_OPTIONS, filters.month, (month) => onChange({ month }))}
       {radioGroup("Precio desde", PRICE_RANGES, filters.price, (price) => onChange({ price: price as PriceRangeKey }))}
     </div>

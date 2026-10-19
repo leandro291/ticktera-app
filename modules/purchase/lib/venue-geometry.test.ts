@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { VENUE_LAYOUTS } from "../data/venues";
+import { buildZoneLayout } from "./zone-layout";
 import { halfMoonPath, MAP_WIDTH, mapCenter, mapHeight, polar, sectorCentroid, sectorPath } from "./venue-geometry";
 
 describe("polar", () => {
@@ -35,9 +35,10 @@ describe("halfMoonPath", () => {
   });
 });
 
-describe("venue layouts", () => {
-  for (const layout of Object.values(VENUE_LAYOUTS)) {
-    it(`AC14: every ${layout.id} zone wraps the stage without overlapping it and fits the map`, () => {
+describe("zone layouts", () => {
+  for (const n of [1, 3, 10]) {
+    const layout = buildZoneLayout(Array.from({ length: n }, (_, i) => ({ id: `z${i}`, name: `Zona ${i}` })));
+    it(`AC3: ${n} generated zones wrap the stage without overlapping it and fit the map`, () => {
       const height = mapHeight(
         layout.zones.map((z) => z.arc),
         layout.stageRadius,

@@ -25,9 +25,10 @@ export type {
   TransitionAction,
 } from "./types/event-write";
 export { parseEventSearchParams } from "./lib/search-params";
-export { getEventById, getEvents, getFeaturedEvents, getRelatedEvents } from "./services/event-service";
+export { cityOptions, filterEvents, pickFeatured, pickRelated } from "./lib/event-filter";
+export { PLACEHOLDER_IMAGE, type PublicTier } from "./lib/catalog-mapper";
 export { EVENT_CATEGORIES } from "./types/event";
-export type { AvailabilityStatus, Currency, EventCategory, EventDetail, EventSummary, VenueLayoutId } from "./types/event";
+export type { AvailabilityStatus, Currency, EventCategory, EventDetail, EventSummary } from "./types/event";
 export { EVENT_LIST_SCOPES } from "./types/event-list";
 export type {
   EventDbStatus,

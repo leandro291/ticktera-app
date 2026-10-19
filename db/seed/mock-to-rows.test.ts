@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GENERAL_ADMISSION_CAPACITY, buildSeedRows, ensureFuture, slugify } from "./mock-to-rows";
+import { GENERAL_ADMISSION_CAPACITY, NUMBERED_ZONE_CAPACITY, buildSeedRows, ensureFuture, slugify } from "./mock-to-rows";
 
 const ORGANIZER = "00000000-0000-0000-0000-000000000001";
 
@@ -38,15 +38,14 @@ describe("buildSeedRows", () => {
     expect(ticketTypes.filter((t) => t.eventSlug === "romeo-y-julieta-obra-de-teatro")).toHaveLength(4);
   });
 
-  it("AC15: no zone starts sold out (capacity > 0); general = 1000; numbered = seat count", async () => {
+  it("AC11 (catalog): no zone starts sold out; general = 1000; numbered = fixed capacity", async () => {
     const { ticketTypes } = await buildSeedRows(ORGANIZER);
     expect(ticketTypes.every((t) => t.capacity > 0)).toBe(true);
 
     const bad = ticketTypes.filter((t) => t.eventSlug === "bad-bunny-world-tour");
     expect(bad[0].capacity).toBeGreaterThan(0); // Campo VIP (mock sold-out) keeps its real capacity
     expect(bad[1].capacity).toBe(GENERAL_ADMISSION_CAPACITY); // Campo General
-    expect(bad[2].capacity).toBeGreaterThan(80); // Occidente (numbered)
-    expect(bad[2].capacity).not.toBe(GENERAL_ADMISSION_CAPACITY);
+    expect(bad[2].capacity).toBe(NUMBERED_ZONE_CAPACITY); // Occidente (numbered)
   });
 
   it("AC15: unique (event, name) ticket types and deterministic output", async () => {

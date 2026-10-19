@@ -184,6 +184,10 @@ Una sola consulta por request: una fila por (evento × tipo de entrada), agregad
 
 **Cliente.** `useEvents(scope)` (`modules/event`, TanStack Query) llama a este endpoint con query key `["events", scope, owner]`, donde `owner` es el `userId` de Clerk en `mine`/`all` y `"public"` en `published`. Así un segundo usuario en la misma pestaña no reusa la caché del anterior; la key es solo de caché y el servidor la ignora. En privados queda deshabilitado hasta que Clerk cargó y hay `userId`. Los 400/401/403 no se reintentan. `QueryProvider` se monta en el layout raíz dentro de `ClerkProvider`.
 
+### Catálogo público (`specs/events/real-catalog-and-selection.md`)
+
+La landing, `/events`, `/events/[slug]`, `/events/[slug]/tickets` y `/checkout?event=<slug>` leen de la BD con `listUpcomingEvents` / `getPublicEvent` (`modules/event/server.ts`) y `getEventZones` (`modules/purchase/server.ts`). Solo eventos `published` con `starts_at > now()`; cualquier otro (o un slug inexistente) da 404. El slug es la clave pública de las rutas y del carrito. Una consulta por pantalla trae eventos, zonas y agregados de cupo (sin datos de compradores); los filtros de búsqueda corren en el cliente (techo ~500 eventos). Se vende por zona y cantidad: el mapa de zonas se genera solo a partir de los tipos de entrada y la cantidad por zona va de 0 a `min(max_per_order, cupo)`. El checkout sigue simulado hasta la integración con Stripe.
+
 ### Panel de super admin
 
 `/super-admin/users` (permiso `users:manage-roles`, solo `super_admin`) lista nombre, email, rol, estado (solo organizadores) y fecha de alta, y permite:

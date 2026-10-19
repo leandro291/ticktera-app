@@ -1,4 +1,4 @@
-import type { Currency, EventCategory } from "@/modules/event";
+import type { Currency } from "@/modules/event";
 
 export type PaymentMethod = "card" | "yape" | "cash";
 
@@ -20,7 +20,7 @@ export interface Order {
   event: {
     id: string;
     title: string;
-    category: EventCategory;
+    category: string;
     image: string;
     date: string;
     startTime?: string;

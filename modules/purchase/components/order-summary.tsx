@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRightIcon } from "lucide-react";
 import { formatPrice, type Currency } from "@/modules/event";
 import { cn } from "@/lib/utils";
-import { formatSeatList, formatTicketCount, type CartSummary } from "../lib/cart-summary";
+import { formatTicketCount, type CartSummary } from "../lib/cart-summary";
 
 interface OrderSummaryProps {
   summary: CartSummary;
@@ -43,7 +43,6 @@ export function OrderSummary({ summary, currency, continueHref }: OrderSummaryPr
                 </span>
                 <span className="font-semibold tabular-nums">{formatPrice(item.amount, currency)}</span>
               </span>
-              {item.seats.length > 0 && <span className="text-[13px] text-muted-foreground">{formatSeatList(item.seats)}</span>}
             </li>
           ))}
         </ul>

@@ -286,7 +286,8 @@ PK = `id`.
 ## Reglas de negocio derivadas del modelo
 
 - **Disponibilidad** de un tipo = `capacity` − vendidas − pendientes vigentes. Vendidas = suma de `order_items.quantity` de órdenes `paid`. Pendientes vigentes = suma de órdenes `pending` con `expires_at` en el futuro.
-- **"Agotado" y "Últimas entradas"** se calculan al consultar a partir de la disponibilidad. Nunca se guardan.
+- **"Agotado" y "Últimas entradas"** se calculan al consultar a partir de la disponibilidad. Nunca se guardan. Zona agotada = cupo 0; "últimas" = cupo ≤ max(10, 10 % de la capacidad). Evento agotado = todas sus zonas agotadas; "últimas" = alguna zona en últimas.
+- **"Desde S/ X" del catálogo** = mínimo `price_cents` entre las zonas con cupo (si todas están agotadas, el mínimo de todas).
 - **KPIs del dashboard de organizador** (vendidas, ingresos, publicados) son consultas sobre estas tablas. No hay tablas de resumen. Se calculan sobre los eventos del alcance, sin importar el estado del evento:
   - **Entradas vendidas** = suma de `order_items.quantity` de órdenes `paid`.
   - **Ingresos** = suma de `order_items.quantity * unit_price_cents` de órdenes `paid`, en céntimos de PEN (el producto se castea a `bigint` en SQL: `int4 * int4` desborda). Las órdenes `pending`, `expired` y `refunded` aportan 0; como `refunded` es la orden entera (no hay reembolsos parciales), el ingreso ya es neto de reembolsos.

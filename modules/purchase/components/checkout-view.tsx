@@ -12,7 +12,7 @@ import { useStoreHydrated } from "@/hooks/use-store-hydrated";
 import { cn } from "@/lib/utils";
 import { useCountdown } from "../hooks/use-countdown";
 import { useEventCart } from "../hooks/use-event-cart";
-import { formatSeatList, formatTicketCount, type CartSummary } from "../lib/cart-summary";
+import { formatTicketCount, type CartSummary } from "../lib/cart-summary";
 import { createOrder, generateOrderCode } from "../lib/order";
 import { formatCountdown } from "../lib/payment-format";
 import { useCartStore } from "../store/use-cart-store";
@@ -62,7 +62,6 @@ function SummaryLines({ summary, currency }: { summary: CartSummary; currency: E
             </span>
             <span className="font-semibold tabular-nums">{formatPrice(item.amount, currency)}</span>
           </span>
-          {item.seats.length > 0 && <span className="text-[13px] text-muted-foreground">{formatSeatList(item.seats)}</span>}
         </li>
       ))}
     </ul>

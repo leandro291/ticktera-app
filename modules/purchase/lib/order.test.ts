@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { EventSummary } from "@/modules/event";
-import { buildEventVenue } from "../services/venue-service";
+import type { ZoneTier } from "../types/venue";
 import { getCartSummary } from "./cart-summary";
 import { createOrder, formatOrderSeats, generateOrderCode, getOrderTickets } from "./order";
+import { buildZoneLayout } from "./zone-layout";
 
 const event: EventSummary = {
   id: "evt-001",
@@ -18,15 +19,16 @@ const event: EventSummary = {
   status: "available",
 };
 
-const venue = buildEventVenue({ ...event, venueLayoutId: "stadium" });
-const [a, b] = venue.sections.find((s) => s.zoneId === "norte")!.seats;
+const tiers: ZoneTier[] = buildZoneLayout([
+  { id: "general", name: "Campo General" },
+  { id: "norte", name: "Tribuna Norte" },
+]).zones.map((zone, i) => ({ ...zone, price: [450, 250][i], status: "available", available: 100, maxPerOrder: 6 }));
 const summary = getCartSummary(
   [
-    { zoneId: "general", quantity: 2, seatIds: [] },
-    { zoneId: "norte", quantity: 2, seatIds: [a.id, b.id] },
+    { zoneId: "general", quantity: 2 },
+    { zoneId: "norte", quantity: 2 },
   ],
-  venue.tiers,
-  venue.sections,
+  tiers,
 );
 const order = createOrder({
   code: "TK-12345",
@@ -38,18 +40,10 @@ const order = createOrder({
 });
 
 describe("createOrder", () => {
-  it("AC9: snapshots the paid cart with seats and totals", () => {
+  it("AC9: snapshots the paid cart by zone, without seats, and totals", () => {
     expect(order.items).toEqual([
       { zoneName: "Campo General", quantity: 2, seats: [], amount: 900 },
-      {
-        zoneName: "Tribuna Norte",
-        quantity: 2,
-        seats: [
-          { row: "A", number: a.number },
-          { row: "A", number: b.number },
-        ],
-        amount: 500,
-      },
+      { zoneName: "Tribuna Norte", quantity: 2, seats: [], amount: 500 },
     ]);
     expect(order).toMatchObject({ code: "TK-12345", total: 1400, count: 4, currency: "PEN", buyerName: "Ana Pérez", email: "ana@mail.com" });
     expect(order.event).toEqual({
@@ -71,12 +65,12 @@ describe("createOrder", () => {
 });
 
 describe("tickets", () => {
-  it("AC11: expands one ticket per unit with its zone, seat and code", () => {
+  it("AC11: expands one ticket per unit with its zone and code", () => {
     expect(getOrderTickets(order)).toEqual([
       { code: "TK-12345-01", zoneName: "Campo General", seat: undefined },
       { code: "TK-12345-02", zoneName: "Campo General", seat: undefined },
-      { code: "TK-12345-03", zoneName: "Tribuna Norte", seat: { row: "A", number: a.number } },
-      { code: "TK-12345-04", zoneName: "Tribuna Norte", seat: { row: "A", number: b.number } },
+      { code: "TK-12345-03", zoneName: "Tribuna Norte", seat: undefined },
+      { code: "TK-12345-04", zoneName: "Tribuna Norte", seat: undefined },
     ]);
   });
 
