@@ -11,6 +11,7 @@ export { EventListError, fetchEvents, shouldRetryEvents } from "./services/event
 export { formatDateLong, formatDateShort, formatPrice, formatPriceCents, isoToLimaDate, isoToLimaTime } from "./lib/format";
 export { allowedActions, type EventAction } from "./lib/event-transitions";
 export { EVENT_LIMITS } from "./lib/event-limits";
+export { tierAvailable } from "./lib/availability";
 export { checkPublishable, PUBLISH_MESSAGES } from "./lib/event-publish";
 export { publishIssuesToFieldErrors, zodErrorToFieldErrors } from "./lib/field-errors";
 export { limaDateTimeToDate } from "./lib/lima-datetime";
