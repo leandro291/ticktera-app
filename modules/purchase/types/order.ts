@@ -15,6 +15,18 @@ export interface OrderItem {
   amount: number;
 }
 
+export type TicketStatus = "valid" | "used" | "void"; // = enum `ticket_status`
+
+/** Una fila de `tickets`: una entrada por unidad comprada. */
+export interface IssuedTicket {
+  /** tickets.code: lo que codifica el QR (secreto portador). */
+  code: string;
+  /** ticket_types.name del ítem al que pertenece. */
+  zoneName: string;
+  holderName: string;
+  status: TicketStatus;
+}
+
 export interface Order {
   code: string;
   event: {
@@ -34,4 +46,6 @@ export interface Order {
   buyerName: string;
   email: string;
   paymentMethod: PaymentMethod;
+  /** [] mientras la orden no está paga. */
+  tickets: IssuedTicket[];
 }

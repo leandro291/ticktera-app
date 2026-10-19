@@ -12,6 +12,7 @@ const order: Order = {
   buyerName: "Ana Pérez",
   email: "",
   paymentMethod: "card",
+  tickets: [],
 };
 
 describe("buildOrderIcs", () => {
