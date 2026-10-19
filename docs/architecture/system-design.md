@@ -223,7 +223,7 @@ Spec: `specs/organizer/event-crud.md`. El organizador gestiona **sus** eventos d
 
 ## 3. Pagos y flujo de compra
 
-Stripe `PaymentIntent` con **Payment Element embebido**, solo `card`, moneda `PEN` (el artifact tiene el formulario de tarjeta dentro de la página). Yape y PagoEfectivo del artifact quedan fuera de alcance. **Solo cobra la plataforma:** sin Connect, comisiones ni payouts.
+Stripe `PaymentIntent` con **Payment Element embebido**, solo `card`, moneda `PEN` (el artifact tiene el formulario de tarjeta dentro de la página). Yape y PagoEfectivo del artifact quedan fuera de alcance. **Solo cobra la plataforma:** sin Connect, comisiones ni payouts. **Se vende por zona y cantidad**, sin elegir butaca (ver mer.md, "Fuera del modelo por decisión").
 
 ### Cuenta de Stripe (verificado el 2026-10-09)
 

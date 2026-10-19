@@ -310,6 +310,7 @@ PK = `id`.
 - Yape y PagoEfectivo: solo Stripe con tarjeta.
 - Stripe Connect, comisiones y payouts: cobra solo la plataforma.
 - Organizaciones y equipos: el usuario es el organizador.
+- **Butacas numeradas** (decisión 2026-10-18): se vende por zona y cantidad. Cada `ticket_types` es una zona con cupo; no hay tablas de recintos ni de asientos, y las entradas no llevan asiento. El mapa de zonas de la compra es solo visual (no persiste butacas). Si más adelante se venden butacas reales, se agregan una plantilla de recinto por evento y una tabla de asientos por orden (migración).
 - Tabla de holds: la reserva es una orden `pending` con `expires_at`.
 - Venues reutilizables o con mapa de zonas: el venue son campos del evento y la zona es un tipo de entrada.
 - Compra como invitado: `orders.user_id` es NOT NULL.
