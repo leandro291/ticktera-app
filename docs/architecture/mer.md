@@ -190,8 +190,8 @@ Evento publicado: tarjetas de landing y búsqueda, detalle, y formulario de "Cre
 | `city` | text | no | - | Filtro de ciudad en búsqueda. |
 | `lat` | numeric | sí | - | Nulo si no hay Google Maps (local). |
 | `lng` | numeric | sí | - | Idem. |
-| `status` | `event_status` | no | `draft` | `draft` mientras se crea; `published` es visible al público. |
-| `published_at` | timestamptz | sí | - | Se completa al publicar. |
+| `status` | `event_status` | no | `draft` | `draft` mientras se crea; `published` es visible al público; `suspended` (moderación) y `cancelled` (terminal) dejan de venderse. |
+| `published_at` | timestamptz | sí | - | Se completa al publicar y se conserva al despublicar: no nulo = el slug ya es público e inmutable. |
 | `created_at` | timestamptz | no | `now()` | |
 | `updated_at` | timestamptz | no | `now()` | |
 
@@ -294,6 +294,8 @@ PK = `id`.
   - **Eventos publicados** = eventos con `status = 'published'`. Un evento `cancelled` o `suspended` con ventas `paid` suma entradas e ingresos, pero no cuenta como publicado.
   - Un evento sin tipos de entrada o sin ventas da 0 en todo (capacidad incluida).
 - **"Desde S/ X"** = mínimo de `ticket_types.price_cents` del evento.
+- **Transiciones de `events.status`** (CRUD de eventos): `draft ↔ published` (despublicar solo sin ventas comprometidas), `published → cancelled`, `published ↔ suspended` (moderación), `suspended → cancelled`. `cancelled` es terminal. Comprometido por tipo = vendidas + pendientes vigentes.
+- **Eliminar un evento**: solo sin `order_items` en ninguno de sus tipos (la FK sin cascade lo impide); con órdenes se cancela.
 - **Usuario borrado en Clerk** (webhook `user.deleted`): la fila de `users` queda `suspended`, no se borra. Sus órdenes se conservan. El borrado explícito desde el panel de super admin es distinto: elimina la fila (y el usuario de Clerk) solo si no tiene eventos ni órdenes asociados (FK `events.organizer_id` y `orders.user_id`, sin cascade); si los tiene, falla y la fila queda como estaba.
 
 ## Supuestos

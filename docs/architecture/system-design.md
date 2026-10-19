@@ -14,6 +14,7 @@ Browser ─► Next.js 16 (App Router, Server Actions + route handlers)
              │     └─► Google     OAuth 2.0 / OIDC, solo vía Clerk (la app no habla con Google)
              ├─► Postgres         vía Drizzle ORM (Neon local / Cloud SQL prod)
              ├─► Stripe           cobro con tarjeta + webhooks
+             ├─► Vercel Blob      portadas de eventos (store público, solo desde el servidor)
              └─► Google Maps      solo prod: mapa y autocompletar de dirección
 ```
 
@@ -27,13 +28,14 @@ Browser ─► Next.js 16 (App Router, Server Actions + route handlers)
 | Google OAuth | Credenciales compartidas de Clerk (instancia `development`), sin configurar nada en Google | Cliente OAuth propio en Google Cloud Console, cargado en el dashboard de Clerk |
 | Stripe   | Modo test + Stripe CLI reenviando webhooks a localhost  | Modo live, endpoint público en Cloud Run                      |
 | Maps     | Apagado: la dirección es texto plano                    | Activo, API key restringida por dominio                       |
+| Blob     | Store público `ticktera-covers` (proyecto Vercel `ticktera-app`) | Store propio de producción (se crea al decidir el hosting) |
 | Secretos | `.env.local`                                            | Secret Manager montado como env vars en Cloud Run             |
 
 ### Reglas
 
 - **Mismo Postgres en ambos lados.** Neon y Cloud SQL son Postgres: mismo schema y migraciones, solo cambia `DATABASE_URL`. Misma versión mayor de Postgres en los dos.
 - **Un solo driver.** `pg` con `drizzle-orm/node-postgres` para Neon y Cloud SQL.
-- **Variables validadas con Zod en un único `lib/env.ts`.** Si falta una, la app no arranca. Hoy valida `DATABASE_URL` y `SUPER_ADMIN_EMAIL` (opcional); cada integración agrega las suyas cuando se implemente. Las claves de Clerk no pasan por `lib/env.ts`: el SDK las lee de `process.env`, así que su ausencia no rompe `next build` ni `proxy.ts`.
+- **Variables validadas con Zod en un único `lib/env.ts`.** Si falta una, la app no arranca. Hoy valida `DATABASE_URL`, `SUPER_ADMIN_EMAIL` (opcional) y `BLOB_READ_WRITE_TOKEN` (opcional: sin él solo falla la subida de portadas, 503); cada integración agrega las suyas cuando se implemente. Las claves de Clerk no pasan por `lib/env.ts`: el SDK las lee de `process.env`, así que su ausencia no rompe `next build` ni `proxy.ts`.
 - **Maps se enciende por presencia de su key.** Sin key, el formulario de evento degrada a texto y `lat`/`lng` quedan nulos.
 - **Migraciones con `drizzle-kit`.** En producción se corren como paso del pipeline (Cloud Build), nunca desde la app.
 - **CI/CD y Terraform:** solo descritos acá, fuera de alcance de esta spec.
@@ -50,6 +52,7 @@ Browser ─► Next.js 16 (App Router, Server Actions + route handlers)
 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`  | pública | `pk_test_…`                    | `pk_live_…`                   |                                                |
 | `STRIPE_WEBHOOK_SECRET`               | secreta | Lo entrega Stripe CLI          | Endpoint live de Stripe       | Verifica `POST /api/webhooks/stripe`           |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`     | pública | Ausente (Maps apagado)         | Restringida por dominio       | Opcional: su presencia enciende Maps           |
+| `BLOB_READ_WRITE_TOKEN`               | secreta | `.env.local` (`vercel env pull`) | Store de producción         | Opcional en `lib/env.ts`. Sin token, `POST/DELETE /api/events/[id]/cover` responde 503 y el resto del CRUD funciona |
 | `SUPER_ADMIN_EMAIL`                   | secreta | Email del primer super admin   | Email del primer super admin  | Opcional. La lee el sync Clerk → `users` (webhook y sync perezoso): el email verificado que coincide recibe `super_admin`. Vacío o ausente = sin super admin |
 
 `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in` y `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up` también se cargan (rutas propias de la app). Las `NEXT_PUBLIC_*` viajan al navegador: nunca van claves secretas con ese prefijo.
@@ -152,6 +155,8 @@ Los claims solos nunca alcanzan para acciones sensibles. Entradas del módulo: `
 | Gestión de administradores y ajustes globales | Solo `super_admin`                                               |
 | Eventos propios con ventas (`events:read-own`) | `organizer`, `admin`, `super_admin`                             |
 | Eventos de todos con ventas (`events:read-all`) | `admin`, `super_admin`                                         |
+| CRUD de eventos propios (`events:manage-own`) | `organizer`, `admin`, `super_admin`                              |
+| Moderar eventos ajenos (`events:moderate`)    | `admin`, `super_admin`                                           |
 
 Rutas protegidas por el proxy: `/checkout` y `/my-tickets` (cualquier sesión), `/organizer`, `/admin` (reservada, sin UI todavía) y `/super-admin`. `/sign-in`, `/sign-up` y `/api/webhooks/clerk` nunca se bloquean. `/api/events` tampoco está en las reglas del proxy: su única barrera es la capa 2, dentro del handler.
 
@@ -195,7 +200,20 @@ Reglas: hay un único `super_admin`; el panel no lo asigna, no lo modifica ni lo
 
 - **A1** Cliente → organizador por autoservicio con el botón "Vender entradas" (alternativa: aprobación de admin).
 - **A2** El primer `super_admin` se asigna en el sync Clerk → `users`: si el email primario **verificado** (case-insensitive) coincide con `SUPER_ADMIN_EMAIL`, la fila nace con `super_admin`. No hay seed de usuarios (`users.clerk_user_id` es NOT NULL y la fila solo existe cuando la persona ya se registró en Clerk). El sync nunca degrada un rol existente: si `SUPER_ADMIN_EMAIL` cambia, el anterior conserva `super_admin` hasta cambiarlo a mano. Después el super admin crea administradores y organizadores y gestiona sus roles desde el panel.
-- **A3** `admin` suspende eventos y usuarios pero no cambia roles.
+- **A3** `admin` modera eventos (suspender, reactivar, cancelar con `events:moderate`) y suspende usuarios, pero no cambia roles ni edita contenido ajeno.
+
+### CRUD de eventos
+
+Spec: `specs/organizer/event-crud.md`. El organizador gestiona **sus** eventos desde `/organizer` (crear, editar, publicar, despublicar, cancelar, eliminar) y `admin`/`super_admin` los moderan desde `/admin/events`.
+
+- **Escritura por Server Actions** (`modules/event/actions/event-actions.ts`): `saveEventAction`, `transitionEventAction`, `moderateEventAction`, `deleteEventAction`. Orden: `requirePermission` → Zod (descarta `organizerId`, `status`, `slug`, `publishedAt`, `coverImageUrl`) → servicio. La propiedad va dentro del SQL (`WHERE id = $1 AND organizer_id = $actor`); ajeno e inexistente dan el mismo `not-found`.
+- **Estados** (`allowedActions`): `draft → published` (dueño), `published → draft` solo sin ventas comprometidas, `published → cancelled` (dueño o moderador), `published ↔ suspended` (moderador), `suspended → cancelled` (moderador). `cancelled` es terminal. Un `suspended` no ofrece nada al dueño. Despublicar **conserva** `published_at`: el slug es inmutable desde la primera publicación.
+- **Congelamiento con ventas** (paid o pending vigente): precio y nombre fijos, capacidad ≥ comprometido, no se quita el tipo. Cambiar fecha, hora o lugar exige confirmación explícita (`acknowledgeBuyerImpact`) y queda en el log de auditoría. Un tipo con cualquier `order_items` no se borra (FK).
+- **Concurrencia**: guardar, transicionar y eliminar bloquean la fila del evento y sus `ticket_types` (`FOR UPDATE`) antes de leer ventas, el mismo lock que toma "crear orden". Edición optimista con `updated_at` (`stale`).
+- **Eliminar**: `DELETE` real sin "contar y luego borrar": la FK `order_items → ticket_types` (sin cascade) da `23503` → `has-orders` y se ofrece cancelar.
+- **Portada**: `POST|DELETE /api/events/[id]/cover` (route handler, `multipart/form-data`). Valida MIME, magic bytes (JPEG/PNG/WebP, sin SVG ni GIF) y tamaño (≤ 2 MiB → 413), sube a Vercel Blob con nombre aleatorio y guarda solo la URL. La portada anterior se borra best-effort tras confirmar la BD. Rechaza `Sec-Fetch-Site: cross-site`.
+- **Auditoría**: `console.info({ evt: "event.audit", action, eventId, actorId, from, to, ack })` en cada mutación, sin PII ni tabla.
+- **Huecos conocidos**: cancelar con ventas no reembolsa ni avisa a los compradores (spec de reembolsos y de emails pendientes); los eventos de un organizador suspendido siguen a la venta hasta que un moderador los suspenda.
 
 ### Seed de eventos
 
@@ -217,7 +235,8 @@ Stripe `PaymentIntent` con **Payment Element embebido**, solo `card`, moneda `PE
 ### Flujo
 
 1. **Crear orden** (Server Action, en una transacción):
-   - `SELECT … FOR UPDATE` sobre las filas de `ticket_types` involucradas.
+   - `SELECT … FOR UPDATE` sobre las filas de `ticket_types` involucradas, en orden de `id` (el CRUD de eventos bloquea en el mismo orden).
+   - Después del lock, unir `events` y exigir `status = 'published'` y `starts_at > now()`: un evento cancelado o suspendido no vende (punto de integración del CRUD de eventos, D19).
    - Disponibilidad = `capacity − vendidas − pendientes vigentes` (pendiente vigente: `status = pending` y `expires_at > now()`).
    - Insertar la orden `pending` con `expires_at = now() + 15 min` y los `order_items` con precio congelado.
    - Crear el PaymentIntent con `metadata.order_id` y clave de idempotencia = id de la orden.
@@ -256,7 +275,9 @@ Stripe CLI reenvía los webhooks a localhost. Cloud Scheduler no existe en local
 | Pago tardío sobre orden `expired`                 | Se honra si hay cupo; si no, reembolso automático (A5).                                                     |
 | Falla el espejo del rol en Clerk                  | La acción falla y se reintenta; la BD no queda adelantada sin aviso.                                        |
 | Cambio de precio de un tipo de entrada            | No altera órdenes previas: `unit_price_cents` está congelado en `order_items`.                              |
-| Bajar `capacity` por debajo de lo vendido         | Se valida en la aplicación, no en la BD (el `CHECK` de la BD solo exige `capacity >= 0`).                   |
+| Bajar `capacity` por debajo de lo vendido         | Se valida en la aplicación (`checkFrozenEdit`, bajo lock), no en la BD (el `CHECK` solo exige `capacity >= 0`). |
+| Editar un evento con ventas                       | Precio y nombre del tipo fijos; fecha o lugar solo con confirmación explícita y auditoría.                  |
+| Cancelar un evento con ventas                     | Las órdenes `paid` y sus entradas quedan intactas; sin reembolso ni aviso automático (hueco documentado).  |
 | Usuario borrado en Clerk                          | La fila queda `suspended` y sus órdenes se conservan.                                                       |
 | Google no entrega nombre                          | `full_name` cae a la parte local del email; el usuario lo completa en el checkout.                          |
 | Mismo email por Google y por password             | Un solo usuario en Clerk y una sola fila en `users` (`email` es único).                                     |

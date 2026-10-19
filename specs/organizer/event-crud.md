@@ -1,7 +1,7 @@
 # CRUD de eventos del organizador (con moderación de admin)
 
 - Module: organizer
-- Status: approved
+- Status: done
 - Approved by: lenadro291 (2026-10-09)
 - Mode: SDD
 
@@ -472,8 +472,8 @@ Nota Fase 8: T2 importa `ModerationEventsPage` de T1; `tsc` pasa al cierre de la
 ### Phase 9 — Limpieza y documentación
 | ID | Task | Owns | Depends on | Group | Criteria | Status |
 | -- | ---- | ---- | ---------- | ----- | -------- | ------ |
-| T1 | Borrar `useOrganizerStore` y `organizer-event.ts`; `PersistedStores` sin el store y con borrado único de `ticketera:organizer`; `organizer/index.ts` sin exports muertos | modules/organizer/store/use-organizer-store.ts, modules/organizer/types/organizer-event.ts, components/shared/persisted-stores.tsx, modules/organizer/index.ts | Phase 8 | A | AC32 | todo |
-| T2 | Docs: system-design (§1 Blob y env, §2 permisos y A3, sección "CRUD de eventos", §3 integración del checkout, casos borde) y mer (`events`, transiciones, huecos) | docs/architecture/system-design.md, docs/architecture/mer.md | Phase 8 | A | AC9, AC32 | todo |
+| T1 | Borrar `useOrganizerStore` y `organizer-event.ts`; `PersistedStores` sin el store y con borrado único de `ticketera:organizer`; `organizer/index.ts` sin exports muertos | modules/organizer/store/use-organizer-store.ts, modules/organizer/types/organizer-event.ts, components/shared/persisted-stores.tsx, modules/organizer/index.ts | Phase 8 | A | AC32 | done |
+| T2 | Docs: system-design (§1 Blob y env, §2 permisos y A3, sección "CRUD de eventos", §3 integración del checkout, casos borde) y mer (`events`, transiciones, huecos) | docs/architecture/system-design.md, docs/architecture/mer.md | Phase 8 | A | AC9, AC32 | done |
 
 Nota Fase 9: cierra con `npm run build` y los `grep` de AC32.
 
