@@ -16,6 +16,10 @@ export const envSchema = z.object({
   STRIPE_SECRET_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().regex(/^sk_(test|live)_/, "STRIPE_SECRET_KEY must start with sk_test_ or sk_live_").optional()),
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.preprocess((v) => (v === "" ? undefined : v), z.string().regex(/^pk_(test|live)_/, "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY must start with pk_test_ or pk_live_").optional()),
   STRIPE_WEBHOOK_SECRET: z.preprocess((v) => (v === "" ? undefined : v), z.string().regex(/^whsec_/, "STRIPE_WEBHOOK_SECRET must start with whsec_").optional()),
+  // Optional for the same reason (checkout D12): without them POST /api/internal/expire-orders answers 503 (fail closed).
+  INTERNAL_JOB_SECRET: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(32, "INTERNAL_JOB_SECRET must be at least 32 characters").optional()),
+  EXPIRE_ORDERS_AUDIENCE: z.preprocess((v) => (v === "" ? undefined : v), z.url({ error: "EXPIRE_ORDERS_AUDIENCE must be a valid URL" }).optional()),
+  EXPIRE_ORDERS_SERVICE_ACCOUNT: z.preprocess((v) => (v === "" ? undefined : v), z.email({ error: "EXPIRE_ORDERS_SERVICE_ACCOUNT must be an email" }).optional()),
 }).refine(
   (e) => !e.STRIPE_SECRET_KEY || !e.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || e.STRIPE_SECRET_KEY.slice(3, 7) === e.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.slice(3, 7),
   { path: ["NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"], error: "Stripe secret and publishable keys must be the same mode (test or live)" },

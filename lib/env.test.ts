@@ -36,3 +36,27 @@ describe("envSchema STRIPE_*", () => {
     expect(parse({ STRIPE_SECRET_KEY: "sk_live_abc" }).success).toBe(true)
   })
 })
+
+describe("envSchema job vars", () => {
+  it("AC22: vacío equivale a ausente", () => {
+    const r = parse({ INTERNAL_JOB_SECRET: "", EXPIRE_ORDERS_AUDIENCE: "", EXPIRE_ORDERS_SERVICE_ACCOUNT: "" })
+    expect(r.success && [r.data.INTERNAL_JOB_SECRET, r.data.EXPIRE_ORDERS_AUDIENCE, r.data.EXPIRE_ORDERS_SERVICE_ACCOUNT]).toEqual([undefined, undefined, undefined])
+  })
+
+  it("AC22: valores válidos", () => {
+    const r = parse({
+      INTERNAL_JOB_SECRET: "a".repeat(32),
+      EXPIRE_ORDERS_AUDIENCE: "https://example.com/api/internal/expire-orders",
+      EXPIRE_ORDERS_SERVICE_ACCOUNT: "job@proj.iam.gserviceaccount.com",
+    })
+    expect(r.success).toBe(true)
+  })
+
+  it.each([
+    ["INTERNAL_JOB_SECRET", "a".repeat(31)],
+    ["EXPIRE_ORDERS_AUDIENCE", "no-es-url"],
+    ["EXPIRE_ORDERS_SERVICE_ACCOUNT", "no-es-email"],
+  ])("AC22: formato inválido en %s", (key, value) => {
+    expect(parse({ [key]: value }).success).toBe(false)
+  })
+})

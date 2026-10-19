@@ -35,7 +35,7 @@ Browser ─► Next.js 16 (App Router, Server Actions + route handlers)
 
 - **Mismo Postgres en ambos lados.** Neon y Cloud SQL son Postgres: mismo schema y migraciones, solo cambia `DATABASE_URL`. Misma versión mayor de Postgres en los dos.
 - **Un solo driver.** `pg` con `drizzle-orm/node-postgres` para Neon y Cloud SQL.
-- **Variables validadas con Zod en un único `lib/env.ts`.** Si falta una, la app no arranca. Hoy valida `DATABASE_URL`, `SUPER_ADMIN_EMAIL` (opcional) y `BLOB_READ_WRITE_TOKEN` (opcional: sin él solo falla la subida de portadas, 503); cada integración agrega las suyas cuando se implemente. Las claves de Clerk no pasan por `lib/env.ts`: el SDK las lee de `process.env`, así que su ausencia no rompe `next build` ni `proxy.ts`.
+- **Variables validadas con Zod en un único `lib/env.ts`.** Si falta una, la app no arranca. Hoy valida `DATABASE_URL`, `SUPER_ADMIN_EMAIL` (opcional), `BLOB_READ_WRITE_TOKEN` (opcional: sin él solo falla la subida de portadas, 503) y las de Stripe y del job de vencimiento (todas opcionales, con validación de formato; ver la tabla); cada integración agrega las suyas cuando se implemente. Las claves de Clerk no pasan por `lib/env.ts`: el SDK las lee de `process.env`, así que su ausencia no rompe `next build` ni `proxy.ts`.
 - **Maps se enciende por presencia de su key.** Sin key, el formulario de evento degrada a texto y `lat`/`lng` quedan nulos.
 - **Migraciones con `drizzle-kit`.** En producción se corren como paso del pipeline (Cloud Build), nunca desde la app.
 - **CI/CD y Terraform:** solo descritos acá, fuera de alcance de esta spec.
@@ -48,9 +48,12 @@ Browser ─► Next.js 16 (App Router, Server Actions + route handlers)
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`   | pública | Clerk development              | Clerk production              |                                                |
 | `CLERK_SECRET_KEY`                    | secreta | Clerk development              | Clerk production              | Backend API: espejo de rol, ban/unban y alta de staff desde el panel. La lee el SDK, no `lib/env.ts` |
 | `CLERK_WEBHOOK_SIGNING_SECRET`        | secreta | Endpoint local (túnel)         | Endpoint de Cloud Run         | Verifica `POST /api/webhooks/clerk`. Opcional en local (rige el sync perezoso), obligatoria en prod |
-| `STRIPE_SECRET_KEY`                   | secreta | `sk_test_…`                    | `sk_live_…`                   |                                                |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`  | pública | `pk_test_…`                    | `pk_live_…`                   |                                                |
-| `STRIPE_WEBHOOK_SECRET`               | secreta | Lo entrega Stripe CLI          | Endpoint live de Stripe       | Verifica `POST /api/webhooks/stripe`           |
+| `STRIPE_SECRET_KEY`                   | secreta | `sk_test_…`                    | `sk_live_…`                   | Opcional en `lib/env.ts` (formato `sk_test_`/`sk_live_`; mismo modo que la publicable, si no la app no arranca). Sin ella `getStripe()` lanza `PaymentsNotConfiguredError`: la acción de checkout responde `payment-unavailable` y el webhook 503 (falla cerrada) |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`  | pública | `pk_test_…`                    | `pk_live_…`                   | Opcional en `lib/env.ts` (formato `pk_test_`/`pk_live_`). La usa el Payment Element del navegador |
+| `STRIPE_WEBHOOK_SECRET`               | secreta | Lo entrega Stripe CLI          | Endpoint live de Stripe       | Verifica `POST /api/webhooks/stripe`. Opcional en `lib/env.ts` (formato `whsec_`); sin él el webhook responde 503 |
+| `INTERNAL_JOB_SECRET`                 | secreta | `openssl rand -hex 32`         | Ausente                       | Opcional, mínimo 32 caracteres. Modo local de `POST /api/internal/expire-orders` (`Authorization: Bearer`) |
+| `EXPIRE_ORDERS_AUDIENCE`              | config  | Ausente                        | URL del endpoint (a definir al desplegar) | Opcional (URL). Audiencia esperada del token OIDC de Cloud Scheduler. Va junto con la siguiente |
+| `EXPIRE_ORDERS_SERVICE_ACCOUNT`       | config  | Ausente                        | Cuenta de servicio de Cloud Scheduler (a definir al desplegar) | Opcional (email). `email` esperado en el token OIDC. Sin secreto ni este par completo, el endpoint responde 503 |
 | `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`     | pública | Ausente (Maps apagado)         | Restringida por dominio       | Opcional: su presencia enciende Maps           |
 | `BLOB_READ_WRITE_TOKEN`               | secreta | `.env.local` (`vercel env pull`) | Store de producción         | Opcional en `lib/env.ts`. Sin token, `POST/DELETE /api/events/[id]/cover` responde 503 y el resto del CRUD funciona |
 | `SUPER_ADMIN_EMAIL`                   | secreta | Email del primer super admin   | Email del primer super admin  | Opcional. La lee el sync Clerk → `users` (webhook y sync perezoso): el email verificado que coincide recibe `super_admin`. Vacío o ausente = sin super admin |
@@ -186,7 +189,7 @@ Una sola consulta por request: una fila por (evento × tipo de entrada), agregad
 
 ### Catálogo público (`specs/events/real-catalog-and-selection.md`)
 
-La landing, `/events`, `/events/[slug]`, `/events/[slug]/tickets` y `/checkout?event=<slug>` leen de la BD con `listUpcomingEvents` / `getPublicEvent` (`modules/event/server.ts`) y `getEventZones` (`modules/purchase/server.ts`). Solo eventos `published` con `starts_at > now()`; cualquier otro (o un slug inexistente) da 404. El slug es la clave pública de las rutas y del carrito. Una consulta por pantalla trae eventos, zonas y agregados de cupo (sin datos de compradores); los filtros de búsqueda corren en el cliente (techo ~500 eventos). Se vende por zona y cantidad: el mapa de zonas se genera solo a partir de los tipos de entrada y la cantidad por zona va de 0 a `min(max_per_order, cupo)`. El checkout sigue simulado hasta la integración con Stripe.
+La landing, `/events`, `/events/[slug]`, `/events/[slug]/tickets` y `/checkout?event=<slug>` leen de la BD con `listUpcomingEvents` / `getPublicEvent` (`modules/event/server.ts`) y `getEventZones` (`modules/purchase/server.ts`). Solo eventos `published` con `starts_at > now()`; cualquier otro (o un slug inexistente) da 404. El slug es la clave pública de las rutas y del carrito. Una consulta por pantalla trae eventos, zonas y agregados de cupo (sin datos de compradores); los filtros de búsqueda corren en el cliente (techo ~500 eventos). Se vende por zona y cantidad: el mapa de zonas se genera solo a partir de los tipos de entrada y la cantidad por zona va de 0 a `min(max_per_order, cupo)`. El checkout cobra con Stripe (ver §3).
 
 ### Panel de super admin
 
@@ -238,34 +241,45 @@ Stripe `PaymentIntent` con **Payment Element embebido**, solo `card`, moneda `PE
 
 ### Flujo
 
-1. **Crear orden** (Server Action, en una transacción):
-   - `SELECT … FOR UPDATE` sobre las filas de `ticket_types` involucradas, en orden de `id` (el CRUD de eventos bloquea en el mismo orden).
-   - Después del lock, unir `events` y exigir `status = 'published'` y `starts_at > now()`: un evento cancelado o suspendido no vende (punto de integración del CRUD de eventos, D19).
+1. **Crear orden** (Server Action `startCheckoutAction`; dos pasos en `/checkout`: datos del comprador y luego Payment Element). Primero una transacción:
+   - `pg_advisory_xact_lock` por (usuario, evento): serializa dos compras paralelas del mismo usuario. Solo lo toma el checkout.
+   - Una reserva vigente por usuario y evento: las `pending` vigentes propias de ese evento pasan a `expired` (y sus `payments` pendientes a `failed`).
+   - `SELECT … FOR UPDATE` sobre las filas de `ticket_types` del evento, en orden de `id` (el CRUD de eventos bloquea en el mismo orden). Orden de locks fijo, también en el webhook: `orders` → `ticket_types`.
+   - Después del lock, leer `events` y exigir `status = 'published'` y `starts_at > now()`: un evento cancelado o suspendido no vende (punto de integración del CRUD de eventos, D19).
    - Disponibilidad = `capacity − vendidas − pendientes vigentes` (pendiente vigente: `status = pending` y `expires_at > now()`).
-   - Insertar la orden `pending` con `expires_at = now() + 15 min` y los `order_items` con precio congelado.
-   - Crear el PaymentIntent con `metadata.order_id` y clave de idempotencia = id de la orden.
-   - Registrar la fila en `payments`.
-2. **Confirmar:** el cliente confirma con Payment Element. El navegador nunca decide si el pago fue exitoso.
-3. **Webhook `payment_intent.succeeded`** (firma verificada): orden → `paid`, crear las entradas (una fila por unidad, código único para el QR) y actualizar el pago. Idempotente vía `stripe_events` (PK = `event.id` de Stripe). Si la orden ya está `expired`, se aplica A5 (ver Casos borde).
-4. **Vencimiento:** Cloud Scheduler llama cada minuto a `POST /api/internal/expire-orders`, autenticado con token OIDC. Marca `expired` las órdenes vencidas y cancela su PaymentIntent. El cálculo de disponibilidad ignora las vencidas aunque el job no haya corrido.
-5. **Reembolso:** solo `admin` / `super_admin`, vía API de Stripe. El webhook `charge.refunded` marca la orden `refunded` y anula las entradas.
+   - Insertar la orden `pending` con `expires_at = now() + 15 min` (reloj de la BD) y los `order_items` con precio congelado. El código es `TK-` + 5 caracteres de un alfabeto sin ambiguos (`crypto.randomInt`), con reintento ante choque. Guardar nombre, celular y documento en `users`.
 
-### Endpoints internos (documentados, no implementados)
+   **Después del commit** (no durante el lock de `ticket_types`: no se sostiene un lock durante una llamada HTTP a Stripe):
+   - Crear el PaymentIntent: solo `card` (`allowed_payment_method_types`), `PEN`, `metadata.order_id` y clave de idempotencia = id de la orden. Registrar la fila en `payments`.
+   - Cancelar, best-effort, los PaymentIntents de las reservas que se liberaron.
+   - Si Stripe falla o no está configurado, la orden se vence en el acto (libera el cupo) y la acción responde `payment-unavailable`.
+2. **Confirmar:** el cliente confirma con Payment Element y vuelve a `/checkout/confirmation?code=TK-…`. La página lee la orden de la BD y se refresca mientras sea `pending`. El navegador nunca decide si el pago fue exitoso.
+3. **Webhook `payment_intent.succeeded`** (`POST /api/webhooks/stripe`; cuerpo crudo, firma verificada): orden → `paid`, crear las entradas (una fila por unidad, código de 12 caracteres aleatorios único, es el contenido del QR; reintento ante choque) y actualizar el pago con marca y últimos 4. Idempotente vía `stripe_events` (PK = `event.id` de Stripe), registrado en la misma transacción que los efectos: si algo falla se revierte todo y Stripe reintenta. Respuestas: 503 sin clave o secreto, 400 sin firma o inválida, 500 si falla el manejador, 200 en el resto. Se ignora (200) un evento de otro tipo, un PaymentIntent sin fila en `payments` o con `metadata.order_id` distinto del de la fila. Si el monto recibido no coincide con el de la orden no se emite nada, no se registra el evento y se loguea para revisión manual.
+   - **Pago tardío (A5):** si la orden está `expired`, o `pending` con `expires_at` ya pasado (el job puede no haber corrido), se honra solo si todos sus tipos tienen cupo y el evento sigue vendible (`published` y futuro). Si no, reembolso automático dentro de la transacción (`idempotencyKey` = `auto-refund:<orderId>`), `payments` → `refunded` y la orden queda `expired`, sin entradas. Un pago a tiempo se honra siempre, aunque el evento se haya cancelado después.
+   - Nunca se emiten entradas sobre un cargo ya reembolsado en Stripe (se lee antes de la transacción).
+4. **Vencimiento:** Cloud Scheduler llama cada minuto a `POST /api/internal/expire-orders` (autenticación en "Endpoints internos"). Marca `expired` hasta 200 órdenes vencidas por llamada (`FOR UPDATE SKIP LOCKED`), pasa sus `payments` pendientes a `failed` y, tras el commit, cancela sus PaymentIntents (un error de Stripe se registra y no aborta el lote). Responde `{ expired, cancelledIntents }`. El cálculo de disponibilidad ignora las vencidas aunque el job no haya corrido.
+5. **Reembolso** (pendiente, #23): solo `admin` / `super_admin`, vía API de Stripe. El webhook `charge.refunded` marcará la orden `refunded` y anulará las entradas. Hoy el webhook solo maneja `payment_intent.succeeded` e ignora `charge.refunded`.
 
-| Endpoint                            | Quién llama        | Autenticación                      |
-| ----------------------------------- | ------------------ | ---------------------------------- |
-| `POST /api/webhooks/clerk`          | Clerk              | Firma (`verifyWebhook`)            |
-| `POST /api/webhooks/stripe`         | Stripe             | Firma del webhook de Stripe        |
-| `POST /api/internal/expire-orders`  | Cloud Scheduler    | Token OIDC                         |
+### Endpoints internos
+
+| Endpoint                            | Quién llama        | Autenticación                      | Estado                             |
+| ----------------------------------- | ------------------ | ---------------------------------- | ---------------------------------- |
+| `POST /api/webhooks/clerk`          | Clerk              | Firma (`verifyWebhook`)            | Implementado                       |
+| `POST /api/webhooks/stripe`         | Stripe             | Firma del webhook de Stripe        | Implementado (solo `payment_intent.succeeded`) |
+| `POST /api/internal/expire-orders`  | Cloud Scheduler    | Bearer `INTERNAL_JOB_SECRET` (local) o token OIDC de Google (producción) | Implementado |
+
+`/api/webhooks/*` y `/api/internal/*` no tienen regla en `proxy.ts`: su única barrera es la propia del handler.
+
+`expire-orders` responde 401 sin credencial o inválida, 503 si no hay ningún modo configurado (falla cerrada), 500 si falla el vencimiento y 200 `{ expired, cancelledIntents }`. Modo secreto: comparación en tiempo constante. Modo OIDC (requiere `EXPIRE_ORDERS_AUDIENCE` y `EXPIRE_ORDERS_SERVICE_ACCOUNT` completos): ID token de Google verificado con `jose` contra el JWKS de Google (emisor `https://accounts.google.com`, `aud`, `exp`, `email` igual a la cuenta de servicio y `email_verified`).
 
 ### Local
 
-Stripe CLI reenvía los webhooks a localhost. Cloud Scheduler no existe en local: el endpoint de vencimiento se invoca a mano o con un script de desarrollo.
+Stripe CLI reenvía los webhooks a localhost: `stripe listen --forward-to localhost:3000/api/webhooks/stripe` imprime el `whsec_…` que va en `STRIPE_WEBHOOK_SECRET`. Cloud Scheduler no existe en local: el vencimiento se invoca a mano con `curl -X POST -H "Authorization: Bearer $INTERNAL_JOB_SECRET" localhost:3000/api/internal/expire-orders`.
 
 ### Supuestos
 
 - **A4** Reserva de 15 minutos.
-- **A5** Pago tardío sobre orden vencida: se honra si hay cupo; si no, se reembolsa automáticamente.
+- **A5** Pago tardío sobre orden vencida: se honra si hay cupo y el evento sigue vendible (`published` y futuro); si no, se reembolsa automáticamente.
 - **A6** Emails fuera de alcance.
 
 ---
@@ -276,7 +290,7 @@ Stripe CLI reenvía los webhooks a localhost. Cloud Scheduler no existe en local
 | ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | Último cupo disputado                             | La transacción bloquea con `FOR UPDATE` las filas de `ticket_types`; el segundo comprador recibe "sin disponibilidad". |
 | Webhook duplicado o reordenado                    | Si el `event.id` ya está en `stripe_events`, se ignora.                                                     |
-| Pago tardío sobre orden `expired`                 | Se honra si hay cupo; si no, reembolso automático (A5).                                                     |
+| Pago tardío sobre orden `expired`                 | Se honra si hay cupo y el evento sigue vendible; si no, reembolso automático (A5).                          |
 | Falla el espejo del rol en Clerk                  | La acción falla y se reintenta; la BD no queda adelantada sin aviso.                                        |
 | Cambio de precio de un tipo de entrada            | No altera órdenes previas: `unit_price_cents` está congelado en `order_items`.                              |
 | Bajar `capacity` por debajo de lo vendido         | Se valida en la aplicación (`checkFrozenEdit`, bajo lock), no en la BD (el `CHECK` solo exige `capacity >= 0`). |
@@ -296,4 +310,7 @@ Stripe CLI reenvía los webhooks a localhost. Cloud Scheduler no existe en local
 - **Proveedor de emails pendiente** (A6): se define al implementar las confirmaciones.
 - **Nombre de marca:** el artifact dice "Ticketera" y el repo "Ticktera". Definir el nombre oficial antes de publicar copy.
 - **Pantalla de consentimiento de Google (producción):** necesita nombre de marca, dominio y política de privacidad definidos antes de pasar a *In production*. Depende del dominio final y del nombre oficial.
-- **Token OIDC de Cloud Scheduler:** audiencia y configuración se deciden al preparar el despliegue.
+- **Token OIDC de Cloud Scheduler:** la verificación del token está implementada (ver §3, "Endpoints internos"), pero la audiencia y la cuenta de servicio de Cloud Scheduler se definen al desplegar y se cargan en `EXPIRE_ORDERS_AUDIENCE` y `EXPIRE_ORDERS_SERVICE_ACCOUNT`. Hasta entonces, en producción el endpoint responde 503.
+- **Monto distinto del esperado:** si `amount_received` no coincide con el de la orden, el webhook no emite entradas ni reembolsa; el cobro queda para revisión manual (el evento no se registra, así que se puede reenviar desde Stripe).
+- **Reembolso manual simultáneo al webhook:** queda una ventana mínima entre la lectura del cargo y el commit en la que un reembolso hecho a mano no se ve. Se cierra con `charge.refunded` (#23).
+- **El job marca `failed` los `payments` pendientes de órdenes vencidas aunque Stripe ya hubiera cobrado.** Si ese pago llega después, el webhook lo trata como tardío por el estado de la orden (no del pago): se honra con cupo o se reembolsa. Con un monto distinto del de la orden, si la orden vence después, el cobro sigue en Stripe sin reembolso automático: la conciliación manual se hace por `payments.stripe_payment_intent_id` o por el `metadata.order_id` del PaymentIntent.

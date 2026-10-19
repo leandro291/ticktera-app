@@ -26,13 +26,14 @@ export async function cancelPaymentIntents(ids: string[]): Promise<void> {
   try {
     stripe = getStripe();
   } catch (e) {
-    console.error("payment: cannot cancel payment intents", e);
+    console.error("payment: cannot cancel payment intents", e instanceof Error ? e.name : typeof e);
     return;
   }
   await Promise.all(
     ids.map((id) =>
       stripe.paymentIntents.cancel(id).catch((e: unknown) => {
-        console.error("payment: payment intent cancel failed", id, e);
+        // Solo id y código: el `raw` de un StripeError trae el PaymentIntent entero (client_secret, metadata).
+        console.error("payment: payment intent cancel failed", id, (e as { code?: unknown } | null)?.code);
       }),
     ),
   );
