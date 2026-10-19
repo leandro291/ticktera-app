@@ -1,6 +1,6 @@
 # System design
 
-Arquitectura de Ticktera: componentes, ambientes, autenticación y roles, pagos y flujo de compra. El design system visual está en [`../design-system.md`](../design-system.md) y el modelo de datos en [`./mer.md`](./mer.md). Origen: `specs/platform/system-design-and-mer.md`.
+Arquitectura de Ticktera: componentes, ambientes, autenticación y roles, pagos y flujo de compra. El design system visual está en [`../design-system.md`](../design-system.md) y el modelo de datos en [`./mer.md`](./mer.md).
 
 ---
 
@@ -293,7 +293,7 @@ Stripe CLI reenvía los webhooks a localhost. Cloud Scheduler no existe en local
 ## Riesgos abiertos
 
 - **Empresa en EE.UU. para la cuenta live de Stripe.** Resuelto el riesgo técnico (ver §3, "Cuenta de Stripe"); queda pendiente crear la entidad y activar la cuenta live antes del despliegue.
-- **Proveedor de emails pendiente** (A6): se define en la spec de confirmaciones.
+- **Proveedor de emails pendiente** (A6): se define al implementar las confirmaciones.
 - **Nombre de marca:** el artifact dice "Ticketera" y el repo "Ticktera". Definir el nombre oficial antes de publicar copy.
 - **Pantalla de consentimiento de Google (producción):** necesita nombre de marca, dominio y política de privacidad definidos antes de pasar a *In production*. Depende del dominio final y del nombre oficial.
-- **Token OIDC de Cloud Scheduler:** audiencia y configuración se deciden en la spec de despliegue.
+- **Token OIDC de Cloud Scheduler:** audiencia y configuración se deciden al preparar el despliegue.
