@@ -248,9 +248,9 @@ Entrada individual emitida al pagar: una fila por unidad de `order_items.quantit
 | Columna | Tipo | Null | Default | Notas |
 | ------- | ---- | ---- | ------- | ----- |
 | `order_item_id` | uuid | no | - | FK → `order_items.id`, `on delete cascade`. |
-| `code` | text | no | - | Único. Lo genera el servidor al pagar: 12 caracteres aleatorios del mismo alfabeto que `orders.code`, sin relación con el código de la orden (no adivinable). Es el contenido del QR; un choque se reintenta. |
+| `code` | text | no | - | Único. Lo genera el servidor al pagar: 12 caracteres aleatorios del mismo alfabeto que `orders.code`, sin relación con el código de la orden (no adivinable). Es el contenido del QR, **solo el código** (sin firma ni URL): es un secreto portador, quien lo tiene entra una vez; el control real del check-in (#24) es la transición atómica `valid → used`. #24 normaliza lo escaneado o tipeado (mayúsculas, sin espacios ni guiones) y consulta por código exacto. Un choque se reintenta. Ver system-design §3, "Entradas, QR y Mis entradas". |
 | `holder_name` | text | no | - | "Titular" de "Mis entradas". Por defecto el comprador (A8). |
-| `status` | `ticket_status` | no | `valid` | `void` al reembolsar. |
+| `status` | `ticket_status` | no | `valid` | `void` al reembolsar (#23); `used` al ingresar (#24). Ninguna de las dos existe todavía: hoy todas son `valid`. |
 
 Único: `code`. Índice: `order_item_id`.
 

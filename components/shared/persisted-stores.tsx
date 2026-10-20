@@ -2,12 +2,12 @@
 
 import { useEffect } from "react";
 import { STORAGE_PREFIX } from "@/lib/persist";
-import { useCartStore, useOrderStore } from "@/modules/purchase";
+import { useCartStore } from "@/modules/purchase";
 
-const STORES = [useCartStore, useOrderStore];
+const STORES = [useCartStore];
 
-// D12: los borradores locales del organizador se abandonan (ahora viven en la BD). ponytail: quitar tras un release.
-const LEGACY_KEYS = [`${STORAGE_PREFIX}organizer`];
+// event-crud D12 / my-tickets D10: los borradores del organizador y las órdenes del checkout simulado se abandonan (ahora viven en la BD). ponytail: quitar tras un release.
+const LEGACY_KEYS = [`${STORAGE_PREFIX}organizer`, `${STORAGE_PREFIX}orders`];
 
 /**
  * Loads every persisted store from localStorage after mount (so the server HTML and the first client render match)
