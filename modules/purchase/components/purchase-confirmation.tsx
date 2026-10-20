@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon, CalendarPlusIcon, CheckIcon, DownloadIcon, LoaderCircleIcon, QrCodeIcon, ReceiptIcon, TicketIcon } from "lucide-react";
-import { DecorativeQr } from "@/components/shared/decorative-qr";
+import { TicketQr } from "@/components/shared/ticket-qr";
 import { formatDateLong, formatPrice } from "@/modules/event";
 import { useOrderPdf } from "../hooks/use-order-pdf";
 import { downloadOrderIcs } from "../lib/calendar";
@@ -60,6 +60,8 @@ export function PurchaseConfirmation({ status, order }: { status: OrderStatus; o
   ];
   const seatLabels = order.items.filter((i) => i.seats.length).map((i) => `${i.zoneName}: ${formatOrderSeats(i.seats)}`);
   const downloadCalendar = () => downloadOrderIcs(order);
+  // AC8: QR real de la primera entrada válida; sin ninguna (bug del webhook) no se inventa un QR ni se ofrece el PDF.
+  const firstValid = order.tickets.find((t) => t.status === "valid");
 
   return (
     <div className="mx-auto flex w-full max-w-[880px] flex-col gap-6 px-4 pt-7 pb-9 lg:items-center lg:gap-9 lg:px-0 lg:pt-14 lg:pb-[72px]">
@@ -96,12 +98,14 @@ export function PurchaseConfirmation({ status, order }: { status: OrderStatus; o
             ))}
           </dl>
         </div>
-        <div className="relative flex flex-col items-center justify-center gap-2.5 border-t-[1.5px] border-dashed border-input p-[22px] lg:w-[220px] lg:shrink-0 lg:border-t-0 lg:border-l-[1.5px] lg:p-0">
-          <span className={`${notch} -top-3 -left-3`} />
-          <span className={`${notch} -top-3 -right-3 lg:right-auto lg:-bottom-3 lg:top-auto lg:-left-3`} />
-          <DecorativeQr seed={`${order.code}-01`} className="size-[168px] lg:size-[126px]" />
-          <span className="text-[13px] text-muted-foreground">Entrada 1 de {order.count}</span>
-        </div>
+        {firstValid && (
+          <div className="relative flex flex-col items-center justify-center gap-2.5 border-t-[1.5px] border-dashed border-input p-[22px] lg:w-[220px] lg:shrink-0 lg:border-t-0 lg:border-l-[1.5px] lg:p-0">
+            <span className={`${notch} -top-3 -left-3`} />
+            <span className={`${notch} -top-3 -right-3 lg:right-auto lg:-bottom-3 lg:top-auto lg:-left-3`} />
+            <TicketQr value={firstValid.code} className="size-[168px] lg:size-[126px]" />
+            <span className="text-[13px] text-muted-foreground">Entrada 1 de {order.tickets.length}</span>
+          </div>
+        )}
       </article>
 
       <div className="flex w-full flex-col gap-2.5 lg:w-auto lg:flex-row lg:gap-3">
@@ -118,10 +122,12 @@ export function PurchaseConfirmation({ status, order }: { status: OrderStatus; o
             <span className="lg:hidden">Calendario</span>
             <span className="hidden lg:inline">Agregar al calendario</span>
           </button>
-          <button type="button" onClick={pdf.download} disabled={pdf.pending} aria-busy={pdf.pending} className={secondaryButton}>
-            {pdf.pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden /> : <DownloadIcon className="size-[18px]" aria-hidden />}
-            {pdf.pending ? "Generando…" : "Descargar PDF"}
-          </button>
+          {firstValid && (
+            <button type="button" onClick={pdf.download} disabled={pdf.pending} aria-busy={pdf.pending} className={secondaryButton}>
+              {pdf.pending ? <LoaderCircleIcon className="size-[18px] animate-spin" aria-hidden /> : <DownloadIcon className="size-[18px]" aria-hidden />}
+              {pdf.pending ? "Generando…" : "Descargar PDF"}
+            </button>
+          )}
         </div>
       </div>
       {pdf.failed && (

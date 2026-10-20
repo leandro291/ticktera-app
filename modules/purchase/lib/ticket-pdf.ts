@@ -1,9 +1,8 @@
 import type { jsPDF } from "jspdf";
-import { QR_SIZE, qrCells } from "@/components/shared/decorative-qr";
 import { saveFile } from "@/lib/download";
+import { qrMatrix } from "@/lib/qr";
 import { formatDateLong } from "@/modules/event";
-import type { Order } from "../types/order";
-import { getOrderTickets, type OrderTicket } from "./order";
+import type { IssuedTicket, Order } from "../types/order";
 
 // Design tokens (jsPDF needs raw RGB).
 const PRIMARY: [number, number, number] = [79, 70, 229];
@@ -17,6 +16,7 @@ const PAGE_W = 210;
 const X = 20;
 const W = PAGE_W - X * 2;
 const COVER_H = 58;
+const QUIET_ZONE = 4; // modules of white margin around the QR
 
 /** Loads the event image cropped to the ticket's cover ratio (object-cover), or null if it can't be read. */
 async function loadCover(src: string): Promise<string | null> {
@@ -38,12 +38,15 @@ async function loadCover(src: string): Promise<string | null> {
   }
 }
 
-function drawQr(doc: jsPDF, seed: string, x: number, y: number, size: number) {
-  const cell = size / QR_SIZE;
+/** Draws the real QR of `code` (only the code) in a `size` mm square that already includes the quiet zone. */
+function drawQr(doc: jsPDF, code: string, x: number, y: number, size: number) {
+  const { size: modules, cells } = qrMatrix(code);
+  const cell = size / (modules + QUIET_ZONE * 2);
+  const origin = QUIET_ZONE * cell;
   doc.setFillColor(...STRONG);
-  qrCells(seed).forEach((on, i) => {
+  cells.forEach((on, i) => {
     // Slight overlap hides hairline seams between cells in PDF viewers.
-    if (on) doc.rect(x + (i % QR_SIZE) * cell, y + Math.floor(i / QR_SIZE) * cell, cell + 0.08, cell + 0.08, "F");
+    if (on) doc.rect(x + origin + (i % modules) * cell, y + origin + Math.floor(i / modules) * cell, cell + 0.08, cell + 0.08, "F");
   });
 }
 
@@ -52,7 +55,7 @@ function fact(doc: jsPDF, label: string, value: string, x: number, y: number, ma
   doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(...STRONG).text(doc.splitTextToSize(value, maxWidth), x, y + 5.5);
 }
 
-function drawTicket(doc: jsPDF, order: Order, ticket: OrderTicket, index: number, total: number, cover: string | null) {
+function drawTicket(doc: jsPDF, order: Order, ticket: IssuedTicket, index: number, total: number, cover: string | null) {
   const { event } = order;
   let y = 20;
 
@@ -93,23 +96,22 @@ function drawTicket(doc: jsPDF, order: Order, ticket: OrderTicket, index: number
   drawQr(doc, ticket.code, X + 14, y + 4, qrSize);
   const fx = X + 10 + qrSize + 18;
   const fw = X + W - 10 - fx;
-  const seat = ticket.seat ? `Fila ${ticket.seat.row}, asiento ${ticket.seat.number}` : "General (sin butaca)";
   fact(doc, "Zona", ticket.zoneName, fx, y + 4, fw);
-  fact(doc, "Ubicación", seat, fx, y + 20, fw);
-  fact(doc, "Titular", order.buyerName || "Titular de la compra", fx, y + 36, fw);
-  fact(doc, "Código", ticket.code, fx, y + 52, fw / 2);
-  fact(doc, "Pedido", order.code, fx + fw / 2, y + 52, fw / 2);
+  fact(doc, "Titular", ticket.holderName, fx, y + 20, fw);
+  fact(doc, "Código", ticket.code, fx, y + 36, fw);
+  fact(doc, "Pedido", order.code, fx, y + 52, fw);
 
   doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...MUTED);
   doc.text("Presenta este QR en el ingreso. Cada entrada es válida para una persona.", X + W / 2, cardTop + cardH - 8, { align: "center" });
 }
 
-/** Browser-only: builds a PDF with one page per ticket and saves it as `<code>.pdf`. */
+/** Browser-only: builds a PDF with one page per `valid` ticket and saves it as `<code>.pdf`. Throws if there is none (no empty PDFs). */
 export async function downloadOrderPdf(order: Order) {
+  const tickets = order.tickets.filter((t) => t.status === "valid");
+  if (tickets.length === 0) throw new Error("Order has no valid tickets");
   const [{ jsPDF }, cover] = await Promise.all([import("jspdf"), loadCover(order.event.image)]);
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   doc.setProperties({ title: `Entradas ${order.code} · ${order.event.title}`, author: "Ticketera" });
-  const tickets = getOrderTickets(order);
   tickets.forEach((ticket, i) => {
     if (i > 0) doc.addPage();
     drawTicket(doc, order, ticket, i, tickets.length, cover);
