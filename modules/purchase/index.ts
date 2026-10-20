@@ -8,4 +8,4 @@ export { downloadOrderIcs } from "./lib/calendar";
 export { formatOrderSeats, getOrderTickets, type OrderTicket } from "./lib/order";
 export { useCartStore } from "./store/use-cart-store";
 export { useOrderStore, usePlacedOrders } from "./store/use-order-store";
-export type { Order } from "./types/order";
+export type { IssuedTicket, Order, TicketStatus } from "./types/order";

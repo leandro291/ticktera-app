@@ -4,32 +4,36 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { CalendarIcon, CalendarPlusIcon, ChevronLeftIcon, ChevronRightIcon, ClockIcon, DownloadIcon, LoaderCircleIcon, MapPinIcon, TicketIcon } from "lucide-react";
-import { DecorativeQr } from "@/components/shared/decorative-qr";
+import { TicketQr } from "@/components/shared/ticket-qr";
 import { cn } from "@/lib/utils";
 import { EventDateBadge, formatDateLong, formatDateShort } from "@/modules/event";
-import { downloadOrderIcs, getOrderTickets, useOrderPdf, usePlacedOrders, type Order } from "@/modules/purchase";
-import { SAMPLE_ORDERS } from "../data/sample-orders";
-import { splitOrdersByDate, todayIso } from "../lib/split-orders";
+import { downloadOrderIcs, useOrderPdf, type Order } from "@/modules/purchase";
+import { splitOrdersByDate } from "../lib/split-orders";
+import { getTicketState } from "../lib/ticket-state";
 
 type Tab = "upcoming" | "past";
 
 const notch = "absolute -top-3 size-6 rounded-full border border-border bg-canvas";
 const navButton = "flex size-11 items-center justify-center rounded-xl border-[1.5px] border-input bg-background disabled:cursor-not-allowed disabled:opacity-40";
 
+const toneClass = { ok: "text-green-700", muted: "text-muted-foreground", error: "text-destructive" } as const;
+
 const ticketCount = (n: number) => (n === 1 ? "1 entrada" : `${n} entradas`);
 
-function OrderTicket({ order }: { order: Order }) {
-  const tickets = getOrderTickets(order);
+function OrderTicketCard({ order, past }: { order: Order; past: boolean }) {
+  const { tickets } = order;
   const [index, setIndex] = useState(0);
   const pdf = useOrderPdf(order);
   const ticket = tickets[Math.min(index, tickets.length - 1)];
   const { event } = order;
-  const zone = ticket.seat ? `${ticket.zoneName} · Fila ${ticket.seat.row}, ${ticket.seat.number}` : ticket.zoneName;
+  const state = getTicketState(ticket.status, past);
+  const canPdf = !past && tickets.some((t) => t.status === "valid");
   const facts = [
-    { label: "Zona", value: zone },
-    { label: "Titular", value: order.buyerName },
-    { label: "Código", value: ticket.code, className: "tabular-nums" },
-    { label: "Estado", value: "Válida", className: "text-green-700" },
+    { label: "Zona", value: ticket.zoneName },
+    { label: "Titular", value: ticket.holderName },
+    // Respaldo de ingreso manual (D6): solo con entrada usable, misma condición que el QR.
+    ...(state.showQr ? [{ label: "Código", value: ticket.code, className: "tabular-nums" }] : []),
+    { label: "Estado", value: state.label, className: toneClass[state.tone] },
   ];
 
   return (
@@ -63,9 +67,7 @@ function OrderTicket({ order }: { order: Order }) {
       </div>
       <div className="@container px-5 pt-[22px] pb-6 lg:px-8 lg:pt-7 lg:pb-8">
         <div className="flex flex-col items-center gap-[18px] @xl:flex-row @xl:gap-9">
-          <div className="size-[220px] shrink-0 rounded-[18px] border border-border bg-white p-3 @xl:size-[200px]">
-            <DecorativeQr seed={ticket.code} className="size-full" />
-          </div>
+          {state.showQr && <TicketQr value={ticket.code} className="size-[220px] shrink-0 rounded-[18px] border border-border @xl:size-[200px]" />}
           <div className="flex w-full min-w-0 grow flex-col gap-[18px]">
             <div className="flex items-center justify-between gap-2">
               <button type="button" aria-label="Entrada anterior" disabled={index === 0} onClick={() => setIndex((i) => i - 1)} className={cn(navButton, "@xl:hidden")}>
@@ -91,27 +93,31 @@ function OrderTicket({ order }: { order: Order }) {
                 </div>
               ))}
             </dl>
-            <div className="grid grid-cols-2 gap-2.5 @xl:flex">
-              <button
-                type="button"
-                onClick={pdf.download}
-                disabled={pdf.pending}
-                aria-busy={pdf.pending}
-                className="flex h-12 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-strong bg-background px-[18px] text-sm font-semibold whitespace-nowrap disabled:cursor-wait disabled:opacity-70 @xl:gap-2"
-              >
-                {pdf.pending ? <LoaderCircleIcon className="size-4 animate-spin" aria-hidden /> : <DownloadIcon className="size-4" aria-hidden />}
-                {pdf.pending ? "Generando…" : <><span className="@xl:hidden">PDF</span><span className="hidden @xl:inline">Descargar PDF</span></>}
-              </button>
-              <button
-                type="button"
-                onClick={() => downloadOrderIcs(order)}
-                className="flex h-12 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-input bg-background px-[18px] text-sm font-medium whitespace-nowrap hover:border-foreground @xl:gap-2"
-              >
-                <CalendarPlusIcon className="size-4" aria-hidden />
-                <span className="@xl:hidden">Calendario</span>
-                <span className="hidden @xl:inline">Agregar al calendario</span>
-              </button>
-            </div>
+            {!past && (
+              <div className="grid grid-cols-2 gap-2.5 @xl:flex">
+                {canPdf && (
+                  <button
+                    type="button"
+                    onClick={pdf.download}
+                    disabled={pdf.pending}
+                    aria-busy={pdf.pending}
+                    className="flex h-12 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-strong bg-background px-[18px] text-sm font-semibold whitespace-nowrap disabled:cursor-wait disabled:opacity-70 @xl:gap-2"
+                  >
+                    {pdf.pending ? <LoaderCircleIcon className="size-4 animate-spin" aria-hidden /> : <DownloadIcon className="size-4" aria-hidden />}
+                    {pdf.pending ? "Generando…" : <><span className="@xl:hidden">PDF</span><span className="hidden @xl:inline">Descargar PDF</span></>}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => downloadOrderIcs(order)}
+                  className="flex h-12 items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-input bg-background px-[18px] text-sm font-medium whitespace-nowrap hover:border-foreground @xl:gap-2"
+                >
+                  <CalendarPlusIcon className="size-4" aria-hidden />
+                  <span className="@xl:hidden">Calendario</span>
+                  <span className="hidden @xl:inline">Agregar al calendario</span>
+                </button>
+              </div>
+            )}
             {pdf.failed && (
               <p role="alert" className="text-sm font-medium text-destructive">
                 No pudimos generar el PDF. Inténtalo de nuevo.
@@ -124,9 +130,8 @@ function OrderTicket({ order }: { order: Order }) {
   );
 }
 
-export function MyTickets() {
-  const placed = usePlacedOrders();
-  const { upcoming, past } = splitOrdersByDate([...placed, ...SAMPLE_ORDERS], todayIso());
+export function MyTickets({ orders, today }: { orders: Order[]; today: string }) {
+  const { upcoming, past } = splitOrdersByDate(orders, today);
   const [tab, setTab] = useState<Tab>("upcoming");
   const [selectedCode, setSelectedCode] = useState<string | null>(null);
 
@@ -190,7 +195,7 @@ export function MyTickets() {
             })}
           </ul>
           <div className="px-4 lg:px-0">
-            <OrderTicket key={selected.code} order={selected} />
+            <OrderTicketCard key={selected.code} order={selected} past={tab === "past"} />
           </div>
         </div>
       ) : (
