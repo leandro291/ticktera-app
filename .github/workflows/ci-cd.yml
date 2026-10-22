@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch: # relanza el deploy a mano (p. ej. tras cambiar un parámetro de Parameter Store)
 
 concurrency:
   group: ci-cd-${{ github.ref }}

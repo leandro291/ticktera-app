@@ -23,6 +23,36 @@ Lo que no se hace ahora y por qué: ver §10 (camino a producción real).
 - La SCP también niega el proveedor OIDC de IAM (ver §6). Sí se pueden crear roles y perfiles de instancia.
 - La VPC por defecto de us-east-2 existe (`vpc-0ef0d6c5d023c8bf9`, subredes en 2a, 2b y 2c) y `t3.micro` está permitido.
 
+## Estado actual (desplegado el 2026-10-22)
+
+La app corre en **https://d2tr2lcud9jcsr.cloudfront.net**. Todo en us-east-2, etiquetado `project=ticktera`.
+
+| Recurso | Identificador |
+| ------- | ------------- |
+| EC2 | `i-08f0198418809d902` (t3.micro, Elastic IP `18.218.96.229`) |
+| RDS | `ticktera-db`, PostgreSQL 18.6 (la misma versión mayor que Neon) |
+| CloudFront | `E1X9QUV7JCKSF7`, OAC `E2LM5324D5XBXM` |
+| S3 | `ticktera-covers-014663857019` |
+| ECR | `ticktera-app` (conserva las últimas 6 imágenes) |
+| Grupos de seguridad | `sg-0cdfedeccdb8a2568` (app, :3000 solo desde CloudFront), `sg-02c517097d2bea7dc` (db, :5432 solo desde la app) |
+| IAM | Rol e instance profile `ticktera-ec2`; usuario `ticktera-ci` |
+| Parameter Store | `/ticktera/*` (11 parámetros; faltan `STRIPE_WEBHOOK_SECRET` y `CLERK_WEBHOOK_SIGNING_SECRET`) |
+| Logs | `/ticktera/app` (14 días) |
+| Budgets | `ticktera-monthly`, USD 30/mes, alertas al 80 % y 100 % (real) y 100 % (pronóstico) |
+
+Bootstrap de la EC2: `infra/aws/user-data.sh`. Deploy: `infra/aws/deploy.sh`. Pipeline: `.github/workflows/ci-cd.yml`.
+
+**Para cargar un secreto nuevo** (por ejemplo el `whsec_` de Stripe): crear el parámetro y relanzar el deploy.
+
+```bash
+aws ssm put-parameter --profile ticketera --region us-east-2 --name /ticktera/STRIPE_WEBHOOK_SECRET --type SecureString --overwrite --value 'whsec_...'
+gh workflow run ci-cd -R leandro291/ticktera-app   # el deploy relee Parameter Store y reinicia la app
+```
+
+**Webhooks (modo test):**
+- Stripe: `https://d2tr2lcud9jcsr.cloudfront.net/api/webhooks/stripe`, evento `payment_intent.succeeded`.
+- Clerk (instancia development): `https://d2tr2lcud9jcsr.cloudfront.net/api/webhooks/clerk`, eventos `user.created`, `user.updated` y `user.deleted`.
+
 ## 2. Arquitectura
 
 ```mermaid
@@ -85,7 +115,7 @@ Precios de lista de us-east-1 (us-east-2 cuesta lo mismo en estos servicios), or
 | CloudFront | Entrada única, HTTPS, caché y portadas | Dominio `*.cloudfront.net`; free tier de 1 TB y 10 M de peticiones | ≈ 0 |
 | EC2 | App en Docker + timer de vencimiento | t3.micro (1 GB), AL2023, 20 GB gp3 | ≈ 9 |
 | Elastic IP | IP fija para el origen de CloudFront | IPv4 pública (se cobra por hora) | ≈ 3,7 |
-| RDS PostgreSQL | Base de datos | db.t4g.micro Single-AZ, 20 GB gp3, backups 7 días | ≈ 14 |
+| RDS PostgreSQL | Base de datos | db.t4g.micro Single-AZ, 20 GB gp3, backups 1 día | ≈ 14 |
 | S3 | Portadas de eventos | Bucket privado, cifrado | < 1 |
 | ECR | Imagen Docker | Conservar las últimas 3 imágenes | < 1 |
 | Systems Manager | Secretos (Parameter Store) y deploys (Run Command) | Parámetros estándar | 0 |
@@ -124,7 +154,7 @@ Se usa la **VPC por defecto** (YAGNI para una demo): la EC2 en una subred públi
 - La prefix list de CloudFront ocupa ≈ 55 de las 60 reglas por defecto de un grupo: dejar `sg-app` solo para eso.
 - La prefix list admite a cualquier distribución de CloudFront, no solo a la propia. Aceptable en una demo con datos de prueba. El endurecimiento es un header secreto `X-Origin-Verify` que CloudFront agrega y `proxy.ts` valida.
 - El tráfico CloudFront → EC2 va por HTTP dentro de la red de AWS. Para HTTPS de punta a punta haría falta un certificado en la EC2, que con un dominio propio se resuelve más adelante.
-- RDS: cifrado en reposo, `rds.force_ssl=1`, backups 7 días, `deletion_protection` activado. La app conecta con TLS verificado: incluir `global-bundle.pem` (certificados de RDS) en la imagen, `NODE_EXTRA_CA_CERTS` apuntando a él y `?sslmode=verify-full` en `DATABASE_URL`.
+- RDS: cifrado en reposo, `rds.force_ssl=1` (valor por defecto en PostgreSQL 15+), backups 1 día (el plan gratuito no permite más) y `deletion_protection` desactivado para poder limpiar al terminar la demo. La app conecta con TLS verificado: incluir `global-bundle.pem` (certificados de RDS) en la imagen, `NODE_EXTRA_CA_CERTS` apuntando a él y `?sslmode=verify-full` en `DATABASE_URL`.
 
 ### IAM
 
@@ -192,7 +222,7 @@ Usa el modo secreto que `expire-orders` ya tiene implementado; no hay cambios de
 
 ### 5.3 RDS
 
-- db.t4g.micro, PostgreSQL con **la misma versión mayor que Neon**, Single-AZ, gp3 de 20 GB, backups automáticos 7 días, sin Performance Insights, sin acceso público.
+- db.t4g.micro, PostgreSQL con **la misma versión mayor que Neon**, Single-AZ, gp3 de 20 GB, backups automáticos 1 día, sin Performance Insights, sin acceso público.
 - Pool de `pg` por defecto (10 conexiones): sobra para una instancia.
 - **Alternativa sin RDS:** Postgres en un contenedor con volumen EBS en la misma EC2 (≈ USD 14 menos al mes). Pierde backups automáticos, aísla peor la memoria de un equipo de 1 GB y exige un respaldo manual (`pg_dump` a S3). Solo si el crédito apremia.
 
