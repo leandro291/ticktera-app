@@ -20,6 +20,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run lint
+      # PageProps, LayoutProps y RouteContext son tipos globales que Next genera; en un checkout limpio no existen.
+      - run: npx next typegen
       - run: npx tsc --noEmit
       - run: npm test
 
