@@ -1,0 +1,85 @@
+name: ci-cd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      # PageProps, LayoutProps y RouteContext son tipos globales que Next genera; en un checkout limpio no existen.
+      - run: npx next typegen
+      - run: npx tsc --noEmit
+      - run: npm test
+
+  deploy:
+    needs: ci
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # La SCP de la cuenta bloquea el proveedor OIDC de GitHub: se usa un usuario IAM dedicado (ticktera-ci).
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build y push de la app
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: runner
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:app-${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ vars.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          cache-from: type=gha,scope=app
+          cache-to: type=gha,scope=app,mode=max
+
+      - name: Build y push de las migraciones
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: migrate
+          push: true
+          tags: ${{ steps.ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }}:migrate-${{ github.sha }}
+          cache-from: type=gha,scope=migrate
+          cache-to: type=gha,scope=migrate,mode=max
+
+      # El script viaja en el comando: el repo es la única fuente de verdad (la EC2 no necesita clonarlo).
+      - name: Deploy en la EC2 por Systems Manager
+        env:
+          INSTANCE_ID: ${{ vars.EC2_INSTANCE_ID }}
+        run: |
+          params=$(jq -nc --arg b64 "$(base64 -w0 infra/aws/deploy.sh)" --arg sha "$GITHUB_SHA" \
+            '{executionTimeout: ["900"], commands: ["mkdir -p /opt/ticktera", "echo \($b64) | base64 -d > /opt/ticktera/deploy.sh", "bash /opt/ticktera/deploy.sh \($sha)"]}')
+          id=$(aws ssm send-command --instance-ids "$INSTANCE_ID" --document-name AWS-RunShellScript \
+            --parameters "$params" --query Command.CommandId --output text)
+          status=0
+          aws ssm wait command-executed --command-id "$id" --instance-id "$INSTANCE_ID" || status=$?
+          aws ssm get-command-invocation --command-id "$id" --instance-id "$INSTANCE_ID" \
+            --query '[Status, StandardOutputContent, StandardErrorContent]' --output text
+          exit $status
