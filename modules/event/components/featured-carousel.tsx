@@ -24,7 +24,7 @@ export function FeaturedCarousel({ events }: { events: EventSummary[] }) {
 
   // Re-armed on every slide change, so manual navigation restarts the countdown.
   useEffect(() => {
-    if (!playing) return;
+    if (!playing || total === 0) return;
     const timer = setTimeout(() => setIndex((i) => (i + 1) % total), SLIDE_MS);
     return () => clearTimeout(timer);
   }, [playing, index, total]);
@@ -47,6 +47,9 @@ export function FeaturedCarousel({ events }: { events: EventSummary[] }) {
       </button>
     </div>
   );
+
+  // Catálogo vacío (BD nueva): sin eventos no hay destacado que mostrar.
+  if (total === 0) return null;
 
   return (
     <section aria-roledescription="carrusel" aria-label="Eventos destacados" className="mx-auto flex max-w-[1440px] flex-col lg:gap-[22px] lg:px-20 lg:pb-6">
