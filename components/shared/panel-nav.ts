@@ -87,7 +87,14 @@ const NAV_SECTIONS: readonly NavSectionDef[] = [
         href: "/organizer",
         match: "/organizer", // también activo en /organizer/events/new
       },
-      { id: "check-in", label: "Check-in", icon: "check-in" },
+      {
+        id: "check-in",
+        label: "Check-in",
+        icon: "check-in",
+        href: "/organizer/check-in",
+        match: "/organizer/check-in",
+        permission: "tickets:check-in",
+      },
       { id: "payouts", label: "Pagos", icon: "payouts" },
     ],
   },

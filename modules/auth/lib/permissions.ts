@@ -11,7 +11,8 @@ export type Permission =
   | "users:suspend"
   | "admin:panel"
   | "users:manage-roles"
-  | "super-admin:panel";
+  | "super-admin:panel"
+  | "tickets:check-in";
 
 // Matriz de system-design §2. Permisos derivados del rol (D2).
 // events:manage-own = CRUD de eventos propios; events:moderate = suspender, reactivar y cancelar eventos ajenos.
@@ -27,6 +28,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "admin:panel",
     "users:manage-roles",
     "super-admin:panel",
+    "tickets:check-in",
   ],
   admin: [
     "checkout:buy",
@@ -37,8 +39,9 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     "events:moderate",
     "users:suspend",
     "admin:panel",
+    "tickets:check-in",
   ],
-  organizer: ["checkout:buy", "organizer:panel", "events:manage-own", "events:read-own"],
+  organizer: ["checkout:buy", "organizer:panel", "events:manage-own", "events:read-own", "tickets:check-in"],
   customer: ["checkout:buy"],
 };
 

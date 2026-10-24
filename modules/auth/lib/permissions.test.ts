@@ -12,6 +12,7 @@ const ALL: Permission[] = [
   "admin:panel",
   "users:manage-roles",
   "super-admin:panel",
+  "tickets:check-in",
 ];
 
 const EXPECTED: Record<Role, Permission[]> = {
@@ -26,6 +27,7 @@ const EXPECTED: Record<Role, Permission[]> = {
     "admin:panel",
     "users:manage-roles",
     "super-admin:panel",
+    "tickets:check-in",
   ],
   admin: [
     "checkout:buy",
@@ -36,8 +38,9 @@ const EXPECTED: Record<Role, Permission[]> = {
     "events:moderate",
     "users:suspend",
     "admin:panel",
+    "tickets:check-in",
   ],
-  organizer: ["checkout:buy", "organizer:panel", "events:manage-own", "events:read-own"],
+  organizer: ["checkout:buy", "organizer:panel", "events:manage-own", "events:read-own", "tickets:check-in"],
   customer: ["checkout:buy"],
 };
 
@@ -58,6 +61,10 @@ describe("permissions", () => {
   it("AC1 (event-crud): manage-own sin customer; moderate solo admin y super_admin", () => {
     expect(ROLES.filter((r) => can(r, "events:manage-own"))).toEqual(["super_admin", "admin", "organizer"]);
     expect(ROLES.filter((r) => can(r, "events:moderate"))).toEqual(["super_admin", "admin"]);
+  });
+
+  it("AC2: tickets:check-in solo organizer, admin y super_admin", () => {
+    expect(ROLES.filter((r) => can(r, "tickets:check-in"))).toEqual(["super_admin", "admin", "organizer"]);
   });
 
   it("AC6: parseRole con undefined, inválido y válido", () => {

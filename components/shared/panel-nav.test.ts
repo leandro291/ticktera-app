@@ -46,7 +46,7 @@ describe("getNavSections", () => {
   })
 
   it("AC2: habilitados por rol", () => {
-    const organizerItems = ["events"]
+    const organizerItems = ["events", "check-in"]
     expect(enabledIds("customer")).toEqual([])
     expect(enabledIds("organizer")).toEqual(organizerItems)
     expect(enabledIds("admin")).toEqual(["moderation", ...organizerItems])
@@ -77,6 +77,15 @@ describe("getActiveNavItem", () => {
   it("AC3: rutas del organizador, prefijo más largo gana", () => {
     expect(activeId(organizer, "/organizer")).toBe("events")
     expect(activeId(organizer, "/organizer/events/new")).toBe("events")
+  })
+
+  it("AC11: /organizer/check-in activa Check-in y no Eventos; Pagos sigue deshabilitado", () => {
+    for (const sections of [organizer, admin, superAdmin]) {
+      expect(activeId(sections, "/organizer/check-in")).toBe("check-in")
+    }
+    expect(activeId(organizer, "/organizer")).toBe("events")
+    const payouts = organizer[0].items.find((i) => i.id === "payouts")
+    expect(payouts?.href).toBeNull()
   })
 
   it("AC3: Usuarios solo activo para super_admin", () => {
