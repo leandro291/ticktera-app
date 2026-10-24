@@ -36,7 +36,7 @@ La app corre en **https://d2tr2lcud9jcsr.cloudfront.net**. Todo en us-east-2, et
 | ECR | `ticktera-app` (conserva las últimas 6 imágenes) |
 | Grupos de seguridad | `sg-0cdfedeccdb8a2568` (app, :3000 solo desde CloudFront), `sg-02c517097d2bea7dc` (db, :5432 solo desde la app) |
 | IAM | Rol e instance profile `ticktera-ec2`; usuario `ticktera-ci` |
-| Parameter Store | `/ticktera/*` (11 parámetros; faltan `STRIPE_WEBHOOK_SECRET` y `CLERK_WEBHOOK_SIGNING_SECRET`) |
+| Parameter Store | `/ticktera/*` (13 parámetros, incluidos `STRIPE_WEBHOOK_SECRET` y `CLERK_WEBHOOK_SIGNING_SECRET`) |
 | Logs | `/ticktera/app` (14 días) |
 | Budgets | `ticktera-monthly`, USD 30/mes, alertas al 80 % y 100 % (real) y 100 % (pronóstico) |
 
@@ -49,9 +49,11 @@ aws ssm put-parameter --profile ticketera --region us-east-2 --name /ticktera/ST
 gh workflow run ci-cd -R leandro291/ticktera-app   # el deploy relee Parameter Store y reinicia la app
 ```
 
-**Webhooks (modo test):**
+**Webhooks (modo test, configurados y verificados):**
 - Stripe: `https://d2tr2lcud9jcsr.cloudfront.net/api/webhooks/stripe`, evento `payment_intent.succeeded`.
 - Clerk (instancia development): `https://d2tr2lcud9jcsr.cloudfront.net/api/webhooks/clerk`, eventos `user.created`, `user.updated` y `user.deleted`.
+
+**Datos de ejemplo:** el seed se corrió en RDS (8 categorías, 8 eventos, 38 tipos de entrada; omite los eventos en EUR/USD). Para repetirlo se usa la imagen `migrate` en la EC2 vía SSM, porque `db:seed` se niega a correr con `NODE_ENV=production`; el usuario organizador debe existir antes en `users`.
 
 ## 2. Arquitectura
 
