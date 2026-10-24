@@ -55,6 +55,8 @@ gh workflow run ci-cd -R leandro291/ticktera-app   # el deploy relee Parameter S
 
 **Datos de ejemplo:** el seed se corrió en RDS (8 categorías, 8 eventos, 38 tipos de entrada; omite los eventos en EUR/USD). Para repetirlo se usa la imagen `migrate` en la EC2 vía SSM, porque `db:seed` se niega a correr con `NODE_ENV=production`; el usuario organizador debe existir antes en `users`.
 
+**Cierre automático de la demo (1 mes, tope USD 27):** el presupuesto `ticktera-monthly` está en USD 27. El 2026-11-23 (hora de Lima), EventBridge Scheduler (rol `ticktera-scheduler`) detiene la EC2 (`ticktera-close-ec2`, 00:00), borra la RDS dejando el snapshot `ticktera-db-final` (`ticktera-close-rds`, 00:05) y desasocia y libera la Elastic IP (`ticktera-close-eip-detach`, 00:08, y `ticktera-close-eip`, 00:10). Para extender la demo se borran esos 4 schedules: `aws scheduler delete-schedule --name <nombre>`. Después del cierre quedan solo el disco de la EC2 detenida y el snapshot (≈ USD 4/mes); para costo cero se borran también (EC2, snapshot, ECR, S3, CloudFront, parámetros SSM).
+
 ## 2. Arquitectura
 
 ```mermaid
